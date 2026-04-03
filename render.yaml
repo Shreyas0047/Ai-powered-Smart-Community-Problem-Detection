@@ -1,0 +1,40 @@
+services:
+  - name: smart-community-ai
+    type: web
+    runtime: python
+    plan: free
+    rootDir: ai_service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+
+  - name: smart-community-web
+    type: web
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_SERVICE_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: BBMP_EMAIL_TO
+        value: comm@bbmp.gov.in
+      - key: CORS_ORIGIN
+        sync: false
+      - key: ALLOW_ROLE_TOKEN_ISSUE
+        value: "false"
