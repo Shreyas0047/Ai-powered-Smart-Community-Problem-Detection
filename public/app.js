@@ -511,52 +511,6 @@ function setupRevealAnimations() {
   revealElements.forEach((element) => observer.observe(element));
 }
 
-function setupHorizontalTicker() {
-  const tickerSection = document.querySelector(".ticker-section");
-  const tickerStage = document.getElementById("tickerStage");
-  const tickerTrack = document.getElementById("tickerTrack");
-
-  if (!tickerSection || !tickerStage || !tickerTrack || !window.gsap || !window.ScrollTrigger) {
-    return;
-  }
-
-  window.gsap.registerPlugin(window.ScrollTrigger);
-
-  const existingTrigger = window.ScrollTrigger.getById("civic-ticker");
-  if (existingTrigger) {
-    existingTrigger.kill();
-  }
-
-  window.gsap.killTweensOf(tickerTrack);
-  window.gsap.set(tickerTrack, { x: 0 });
-
-  const getTravelDistance = () => {
-    const availableWidth = tickerStage.clientWidth;
-    const contentWidth = tickerTrack.scrollWidth;
-    return Math.max(0, contentWidth - availableWidth + 80);
-  };
-
-  const travelDistance = getTravelDistance();
-  if (travelDistance <= 0) {
-    return;
-  }
-
-  window.gsap.to(tickerTrack, {
-    x: () => -getTravelDistance(),
-    ease: "none",
-    scrollTrigger: {
-      id: "civic-ticker",
-      trigger: tickerSection,
-      start: "top top",
-      end: () => `+=${getTravelDistance() + window.innerHeight * 0.45}`,
-      pin: tickerStage,
-      scrub: 1,
-      anticipatePin: 1,
-      invalidateOnRefresh: true
-    }
-  });
-}
-
 function setupGooeyInteractions() {
   const gooeySurfaces = document.querySelectorAll("[data-gooey]");
 
@@ -608,7 +562,6 @@ function setupGooeyInteractions() {
     surface.dataset.gooeyBound = "true";
   });
 }
-
 function renderPermissions(permissions = []) {
   authPermissions.innerHTML = permissions
     .map((permission) => {
@@ -1560,8 +1513,34 @@ function markerColor(status) {
   return "#ff6b7a";
 }
 
-function renderMap(_complaints) {
-  return;
+function renderMap(complaints) {
+  document.getElementById("mapLegend").innerHTML = `
+    <span><i class="legend-dot red"></i> Pending</span>
+    <span><i class="legend-dot yellow"></i> In Progress</span>
+    <span><i class="legend-dot green"></i> Resolved</span>
+  `;
+
+  const markers = complaints
+    .map((complaint) => {
+      const lat = complaint.mapLocation?.lat ?? 12.9716;
+      const lng = complaint.mapLocation?.lng ?? 77.5946;
+      const x = 15 + ((lng - 77.56) / 0.08) * 70;
+      const y = 15 + ((12.99 - lat) / 0.06) * 70;
+      return `<div class="map-pin" style="left:${Math.max(6, Math.min(88, x))}%; top:${Math.max(
+        8,
+        Math.min(84, y)
+      )}%; --pin:${markerColor(complaint.status)}" title="${escapeHtml(complaint.type)} - ${escapeHtml(complaint.location)}"></div>`;
+    })
+    .join("");
+
+  document.getElementById("complaintsMap").innerHTML = `
+    <div class="map-grid">
+      <div class="road road-a"></div>
+      <div class="road road-b"></div>
+      <div class="road road-c"></div>
+      ${markers}
+    </div>
+  `;
 }
 
 function updateVoiceTranscriptValue(finalText, interimText = "") {
@@ -1819,6 +1798,8 @@ function renderLoggedOutState() {
   document.getElementById("adminTable").innerHTML = `<div class="table-row empty-state"><span>Login as Admin to access the command center.</span></div>`;
   alertsList.innerHTML = `<div class="table-row"><span>Login as Admin to manage alerts.</span></div>`;
   userManagementList.innerHTML = `<div class="table-row"><span>Login as Admin to manage accounts.</span></div>`;
+  document.getElementById("mapLegend").innerHTML = "";
+  document.getElementById("complaintsMap").innerHTML = `<div class="table-row empty-state"><span>Login to view complaint markers on the map.</span></div>`;
 }
 
 async function loadDashboard() {
@@ -2216,7 +2197,6 @@ setupComplaintInputMode();
 setupMobileMenu();
 setupRevealAnimations();
 setupGooeyInteractions();
-setupHorizontalTicker();
 applyPermissionState();
 updateAudioToggleState();
 setPdfButtonState(false);
