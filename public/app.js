@@ -57,8 +57,6 @@ const adminWorkspace = document.getElementById("adminWorkspace");
 const adminActionCenter = document.getElementById("adminActionCenter");
 const alertsWorkspace = document.getElementById("alertsWorkspace");
 const alertsList = document.getElementById("alertsList");
-const sensorsWorkspace = document.getElementById("sensorsWorkspace");
-const sensorList = document.getElementById("sensorList");
 const mapWorkspace = document.getElementById("mapWorkspace");
 const userManagementWorkspace = document.getElementById("userManagementWorkspace");
 const locationMapFrame = document.getElementById("locationMapFrame");
@@ -88,7 +86,6 @@ const permissionMeta = {
   submit_complaint: { label: "Submit Complaint", target: () => reportFormWorkspace },
   view_personal_updates: { label: "View Personal Updates", target: () => complaintsWorkspace },
   view_dashboard: { label: "View Dashboard", target: () => adminWorkspace },
-  view_sensors: { label: "View Sensors", target: () => sensorsWorkspace },
   reset_dashboard: { label: "Reset Dashboard", action: () => resetDashboardBtn.click() },
   manage_alerts: { label: "Manage Alerts", target: () => alertsWorkspace },
   update_complaint_status: { label: "Update Complaint Status", target: () => complaintsWorkspace },
@@ -682,9 +679,6 @@ function applyPermissionState() {
     alertsList.innerHTML = `<div class="table-row"><span>Login as Admin to manage alerts.</span></div>`;
   }
 
-  if (!permissions.includes("view_sensors")) {
-    sensorList.innerHTML = `<div class="table-row"><span>Login as Admin to view sensor readings.</span></div>`;
-  }
 }
 
 function getAuthSuccessMessage(mode, data) {
@@ -1432,37 +1426,6 @@ function renderAdminTable(complaints) {
     adminMarkup || `<div class="table-row empty-state"><span>No complaints are currently in the admin queue.</span></div>`;
 }
 
-function renderSensors(readings = []) {
-  const canViewSensors = authState?.permissions?.includes("view_sensors");
-
-  if (!canViewSensors) {
-    sensorList.innerHTML = `<div class="table-row"><span>Login as Admin to view sensor readings.</span></div>`;
-    return;
-  }
-
-  if (!readings.length) {
-    sensorList.innerHTML = `<div class="table-row empty-state"><span>No active sensor readings available.</span></div>`;
-    return;
-  }
-
-  sensorList.innerHTML = readings
-    .map(
-      (reading) => `
-        <div class="table-row">
-          <div>
-            <strong>${escapeHtml(reading.sensor)}</strong>
-            <span>${escapeHtml(reading.zone)}</span>
-          </div>
-          <div>
-            <strong>${escapeHtml(reading.value)} ${escapeHtml(reading.unit)}</strong>
-            <span>${escapeHtml(reading.status)}</span>
-          </div>
-        </div>
-      `
-    )
-    .join("");
-}
-
 function renderAlerts(complaints = []) {
   const canManageAlerts = authState?.permissions?.includes("manage_alerts");
 
@@ -1855,7 +1818,6 @@ function renderLoggedOutState() {
   document.getElementById("complaintsList").innerHTML = `<div class="table-row empty-state"><span>Login to view your complaint history.</span></div>`;
   document.getElementById("adminTable").innerHTML = `<div class="table-row empty-state"><span>Login as Admin to access the command center.</span></div>`;
   alertsList.innerHTML = `<div class="table-row"><span>Login as Admin to manage alerts.</span></div>`;
-  sensorList.innerHTML = `<div class="table-row"><span>Login as Admin to view sensor readings.</span></div>`;
   userManagementList.innerHTML = `<div class="table-row"><span>Login as Admin to manage accounts.</span></div>`;
 }
 
@@ -1873,7 +1835,6 @@ async function loadDashboard() {
   renderComplaints(data.complaints);
   renderAdminTable(data.complaints);
   renderAlerts(data.complaints);
-  renderSensors(data.iotReadings);
   renderMap(data.complaints);
   renderUserManagement(data.manageableUsers || []);
 
