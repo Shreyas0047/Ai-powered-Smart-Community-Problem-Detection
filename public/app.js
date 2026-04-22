@@ -8,7 +8,6 @@ const voiceTranscriptInput = document.getElementById("voiceTranscriptInput");
 const voiceAudioFileInput = document.getElementById("voiceAudioFile");
 const voiceAudioPreview = document.getElementById("voiceAudioPreview");
 const voiceAudioMeta = document.getElementById("voiceAudioMeta");
-const transcribeAudioBtn = document.getElementById("transcribeAudioBtn");
 const voiceTranscriptStatus = document.getElementById("voiceTranscriptStatus");
 const imageFileInput = document.getElementById("imageFile");
 const aiImageDescription = document.getElementById("aiImageDescription");
@@ -1631,11 +1630,14 @@ async function readFileAsDataUrl(file) {
 
 async function setupVoiceAudioFile() {
   const file = voiceAudioFileInput.files?.[0];
+  const existingTranscript = voiceTranscriptInput.value.trim();
   clearVoiceAudioSelection();
-  updateVoiceTranscriptValue("");
+  updateVoiceTranscriptValue(existingTranscript);
 
   if (!file) {
-    voiceTranscriptStatus.textContent = "Upload an audio file to generate a complaint transcript.";
+    voiceTranscriptStatus.textContent = existingTranscript
+      ? "Audio removed. You can still submit the typed voice complaint summary."
+      : "Upload an audio file and type the complaint summary manually.";
     return;
   }
 
@@ -1648,37 +1650,9 @@ async function setupVoiceAudioFile() {
     mimeType: file.type || "application/octet-stream",
     dataUrl: await readFileAsDataUrl(file)
   };
-  voiceTranscriptStatus.textContent = "Audio file ready. Click Transcribe Audio to convert it into complaint text.";
-}
-
-async function transcribeUploadedAudio() {
-  if (!currentVoiceAudioData?.dataUrl) {
-    voiceTranscriptStatus.textContent = "Upload an audio file before requesting transcription.";
-    return;
-  }
-
-  transcribeAudioBtn.disabled = true;
-  voiceTranscriptStatus.textContent = "Uploading audio to the AI service for transcription...";
-
-  try {
-    const response = await apiRequest("/api/transcribe-audio", {
-      method: "POST",
-      body: JSON.stringify({
-        audioBase64: currentVoiceAudioData.dataUrl,
-        filename: currentVoiceAudioData.filename,
-        mimeType: currentVoiceAudioData.mimeType
-      })
-    });
-
-    updateVoiceTranscriptValue(response.transcript || "");
-    voiceTranscriptStatus.textContent = response.transcript
-      ? "Audio transcribed successfully. Review the transcript before submitting."
-      : "The AI service did not return any transcript text.";
-  } catch (error) {
-    voiceTranscriptStatus.textContent = error.message;
-  } finally {
-    transcribeAudioBtn.disabled = false;
-  }
+  voiceTranscriptStatus.textContent = existingTranscript
+    ? "Audio file attached. Review your typed summary and submit the complaint."
+    : "Audio file ready. Type the complaint summary manually before submitting.";
 }
 
 function setComplaintInputMode(mode) {
@@ -1692,16 +1666,19 @@ function setComplaintInputMode(mode) {
   voiceTranscriptInput.disabled = !isVoiceMode;
 
   if (isVoiceMode) {
-    transcribeAudioBtn.disabled = !currentVoiceAudioData?.dataUrl;
     if (!voiceTranscriptInput.value.trim()) {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
-        ? "Audio file ready. Click Transcribe Audio to convert it into complaint text."
-        : "Upload an audio file and click Transcribe Audio to generate complaint text.";
+        ? "Audio file attached. Type the complaint summary manually before submitting."
+        : "Upload an audio file and type the complaint summary manually.";
+    } else {
+      voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
+        ? "Audio file attached. Review your typed summary and submit the complaint."
+        : "Typed voice complaint summary ready. You can submit now or attach the original audio.";
     }
     return;
   }
 
-  voiceTranscriptStatus.textContent = "Select Voice transcript to upload an audio file and convert it into complaint text.";
+  voiceTranscriptStatus.textContent = "Select Voice transcript to upload an audio file and type the complaint summary manually.";
 }
 
 function getComplaintTextPayload() {
@@ -1711,7 +1688,7 @@ function getComplaintTextPayload() {
   if (!complaintText) {
     throw new Error(
       mode === "voice"
-        ? "Record a voice transcript before submitting the complaint."
+        ? "Type the voice complaint summary before submitting."
         : "Enter the complaint text before submitting."
     );
   }
@@ -1733,7 +1710,20 @@ function setupComplaintInputMode() {
       voiceTranscriptStatus.textContent = error.message;
     });
   });
-  transcribeAudioBtn.addEventListener("click", transcribeUploadedAudio);
+  voiceTranscriptInput.addEventListener("input", () => {
+    if (complaintInputMode.value !== "voice") {
+      return;
+    }
+
+    const hasTranscript = Boolean(voiceTranscriptInput.value.trim());
+    voiceTranscriptStatus.textContent = hasTranscript
+      ? currentVoiceAudioData?.dataUrl
+        ? "Audio file attached. Review your typed summary and submit the complaint."
+        : "Typed voice complaint summary ready. You can submit now or attach the original audio."
+      : currentVoiceAudioData?.dataUrl
+        ? "Audio file attached. Type the complaint summary manually before submitting."
+        : "Upload an audio file and type the complaint summary manually.";
+  });
 }
 
 function renderLoggedOutState() {
@@ -1792,7 +1782,6 @@ function resetComposer() {
   updateLiveLocationMap("");
   clearVoiceAudioSelection();
   updateVoiceTranscriptValue("");
-  transcribeAudioBtn.disabled = true;
   setComplaintInputMode(complaintInputMode.value || "text");
 }
 

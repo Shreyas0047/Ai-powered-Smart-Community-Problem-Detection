@@ -258,13 +258,12 @@
                 </label>
                 <div id="voiceComplaintField" class="complaint-input-panel" hidden>
                   <label>
-                    Voice transcript
+                    Voice complaint summary
                     <textarea
                       id="voiceTranscriptInput"
                       name="voiceTranscript"
                       rows="4"
-                      placeholder="Upload an audio file and transcribe it into complaint text"
-                      readonly
+                      placeholder="Upload the audio file, then type the spoken complaint as a short transcript or summary"
                     ></textarea>
                   </label>
                   <div class="audio-upload-group">
@@ -272,14 +271,13 @@
                       Upload audio
                       <input type="file" id="voiceAudioFile" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg" />
                     </label>
-                    <button type="button" id="transcribeAudioBtn" class="secondary-button">Transcribe Audio</button>
                   </div>
                   <audio id="voiceAudioPreview" class="voice-audio-preview" controls hidden></audio>
                   <div class="voice-actions">
                     <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
                   </div>
                   <p id="voiceTranscriptStatus" class="helper-text">
-                    Select Voice transcript, upload an audio file, and transcribe it into complaint text.
+                    Select Voice transcript, upload the voice note, and type the complaint summary manually.
                   </p>
                 </div>
                 <label>
