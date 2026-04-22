@@ -278,6 +278,38 @@ button:disabled {
   backdrop-filter: blur(22px);
 }
 
+.soft-hero > :not(.liquid-ether-host),
+.auth-screen > :not(.liquid-ether-host) {
+  position: relative;
+  z-index: 1;
+}
+
+.liquid-ether-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  opacity: 0.42;
+  border-radius: inherit;
+  mix-blend-mode: screen;
+}
+
+.liquid-ether-host canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: saturate(1.05) blur(0.2px);
+}
+
+.liquid-ether-auth {
+  opacity: 0.22;
+}
+
+.liquid-ether-hero {
+  opacity: 0.34;
+}
+
 .soft-hero {
   min-height: 60vh;
   display: grid;
@@ -1334,6 +1366,7 @@ select:focus {
   width: min(540px, 100%);
   padding: 28px 24px;
   background: rgba(255, 255, 255, 0.86);
+  isolation: isolate;
 }
 
 .auth-screen-top {
