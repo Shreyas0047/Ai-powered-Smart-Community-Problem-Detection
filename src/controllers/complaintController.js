@@ -1,5 +1,5 @@
 const Complaint = require("../models/Complaint");
-const { analyzeComplaint } = require("../services/aiClient");
+const { analyzeComplaint, transcribeAudio } = require("../services/aiClient");
 
 const ALLOWED_STATUSES = ["Queued", "In Progress", "Resolved", "Escalated"];
 const ALLOWED_PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -77,6 +77,31 @@ async function analyzeAndCreateComplaint(req, res, next) {
   }
 }
 
+async function transcribeComplaintAudio(req, res, next) {
+  try {
+    const audioBase64 = String(req.body.audioBase64 || "").trim();
+    const filename = String(req.body.filename || "complaint-audio").trim();
+    const mimeType = String(req.body.mimeType || "application/octet-stream").trim();
+
+    if (!audioBase64) {
+      throw createHttpError("Upload an audio file before requesting transcription.", 400);
+    }
+
+    const transcription = await transcribeAudio({
+      audioBase64,
+      filename,
+      mimeType
+    });
+
+    res.json({
+      transcript: String(transcription.transcript || "").trim(),
+      language: transcription.language || "unknown"
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function updateComplaintStatus(req, res, next) {
   try {
     const complaint = await Complaint.findById(req.params.id);
@@ -140,6 +165,7 @@ async function acknowledgeAlert(req, res, next) {
 
 module.exports = {
   analyzeAndCreateComplaint,
+  transcribeComplaintAudio,
   updateComplaintStatus,
   acknowledgeAlert
 };

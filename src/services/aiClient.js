@@ -989,6 +989,32 @@ async function analyzeComplaint(payload) {
   }
 }
 
+async function transcribeAudio(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(`${env.aiServiceUrl}/transcribe`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Audio transcription failed.");
+    }
+
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 module.exports = {
-  analyzeComplaint
+  analyzeComplaint,
+  transcribeAudio
 };

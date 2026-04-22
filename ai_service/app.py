@@ -1,8 +1,19 @@
+import base64
+import os
+import tempfile
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+try:
+    from faster_whisper import WhisperModel
+except ImportError:  # pragma: no cover
+    WhisperModel = None
+
+TRANSCRIPTION_MODEL = None
 
 ISSUE_PROFILES = [
     {
@@ -319,6 +330,20 @@ def normalize_text(value):
 
 def clamp01(value):
     return max(0.0, min(1.0, value))
+
+
+def get_transcription_model():
+    global TRANSCRIPTION_MODEL
+
+    if WhisperModel is None:
+        raise RuntimeError("Audio transcription is unavailable because faster-whisper is not installed.")
+
+    if TRANSCRIPTION_MODEL is None:
+        model_size = os.getenv("WHISPER_MODEL_SIZE", "base")
+        compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+        TRANSCRIPTION_MODEL = WhisperModel(model_size, device="cpu", compute_type=compute_type)
+
+    return TRANSCRIPTION_MODEL
 
 
 def has_any_term(text, terms):
@@ -676,6 +701,37 @@ def analyze_payload(payload):
     }
 
 
+def decode_audio_payload(audio_base64):
+    if not audio_base64:
+        raise ValueError("Audio payload is empty.")
+
+    encoded = audio_base64.split(",", 1)[1] if "," in audio_base64 else audio_base64
+    return base64.b64decode(encoded)
+
+
+def transcribe_audio_payload(payload):
+    audio_base64 = payload.get("audioBase64")
+    filename = str(payload.get("filename") or "complaint-audio").strip()
+    audio_bytes = decode_audio_payload(audio_base64)
+    suffix = os.path.splitext(filename)[1] or ".webm"
+    model = get_transcription_model()
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_audio:
+        temp_audio.write(audio_bytes)
+        temp_path = temp_audio.name
+
+    try:
+        segments, info = model.transcribe(temp_path, beam_size=5, vad_filter=True)
+        transcript = " ".join(segment.text.strip() for segment in segments).strip()
+        return {
+            "transcript": transcript,
+            "language": getattr(info, "language", "unknown"),
+        }
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
@@ -685,6 +741,21 @@ def health():
 def analyze():
     payload = request.get_json(silent=True) or {}
     return jsonify(analyze_payload(payload))
+
+
+@app.post("/transcribe")
+def transcribe():
+    payload = request.get_json(silent=True) or {}
+
+    try:
+        result = transcribe_audio_payload(payload)
+        return jsonify(result)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except RuntimeError as error:
+        return jsonify({"error": str(error)}), 503
+    except Exception:
+        return jsonify({"error": "Audio transcription failed inside the AI service."}), 500
 
 
 if __name__ == "__main__":

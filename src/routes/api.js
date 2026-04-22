@@ -1,7 +1,7 @@
 const express = require("express");
 const { getRoles, issueToken, register, login } = require("../controllers/authController");
 const { getDashboard, resetDashboard } = require("../controllers/dashboardController");
-const { analyzeAndCreateComplaint, updateComplaintStatus, acknowledgeAlert } = require("../controllers/complaintController");
+const { analyzeAndCreateComplaint, transcribeComplaintAudio, updateComplaintStatus, acknowledgeAlert } = require("../controllers/complaintController");
 const { emailBbmpComplaint } = require("../controllers/emailController");
 const { deleteUser } = require("../controllers/userController");
 const { getPaymentConfig, createOrder, verifyPayment } = require("../controllers/paymentController");
@@ -18,6 +18,7 @@ router.use(authenticate);
 
 router.get("/dashboard", requirePermission("submit_complaint"), getDashboard);
 router.post("/analyze-complaint", requirePermission("submit_complaint"), analyzeAndCreateComplaint);
+router.post("/transcribe-audio", requirePermission("submit_complaint"), transcribeComplaintAudio);
 router.post("/email-bbmp", requirePermission("submit_complaint"), emailBbmpComplaint);
 router.patch("/complaints/:id/status", requirePermission("update_complaint_status"), updateComplaintStatus);
 router.post("/complaints/:id/alerts/acknowledge", requirePermission("manage_alerts"), acknowledgeAlert);

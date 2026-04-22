@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
@@ -20,19 +20,22 @@
           <div>
             <p class="eyebrow">Access Portal</p>
             <h2>Login or Register</h2>
+            <p class="auth-intro">Sign in first to open the civic dashboard and complaint management workspace.</p>
           </div>
-          <button type="button" id="closeAuthBtn" class="chip-button">Close</button>
+          <button type="button" id="closeAuthBtn" class="chip-button">Back</button>
         </div>
         <div class="auth-toggle">
           <button type="button" id="showLoginBtn" class="auth-toggle-btn is-active">Login</button>
           <button type="button" id="showRegisterBtn" class="auth-toggle-btn">Register</button>
         </div>
         <form id="authForm" class="auth-form">
-          <fieldset class="role-choice">
-            <legend>Select role</legend>
-            <label><input type="radio" name="role" value="Citizen" checked /> <span>Citizen</span></label>
-            <label><input type="radio" name="role" value="Admin" /> <span>Admin</span></label>
-          </fieldset>
+          <label>
+            Select role
+            <select name="role" id="authRoleSelect">
+              <option value="Citizen">Citizen</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </label>
           <label>
             Username
             <input type="text" id="authUsername" name="username" placeholder="Enter username" />
@@ -48,34 +51,88 @@
     </div>
 
     <div id="mainDashboard" class="page-shell">
-      <section class="top-bar">
+      <header class="site-header">
+        <a href="#mainDashboard" class="brand-lockup">
+          <span class="brand-kicker">Government-ready civic AI</span>
+          <strong>Smart Community Problem Detection</strong>
+        </a>
+        <button type="button" id="mobileMenuToggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="siteNav">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav id="siteNav" class="site-nav">
+          <a href="#reportFormWorkspace" class="nav-link">Report</a>
+          <a href="#complaintsWorkspace" class="nav-link">Complaints</a>
+          <a href="#adminWorkspace" class="nav-link">Dashboard</a>
+          <a href="#alertsWorkspace" class="nav-link">Alerts</a>
+          <a href="#mapWorkspace" class="nav-link">Map</a>
+          <div class="nav-actions">
+            <button type="button" id="audioToggleBtn" class="chip-button">Sound On</button>
+            <button type="button" id="testMicrophoneBtn" class="chip-button">Test Microphone</button>
+            <button type="button" id="issueTokenBtn" class="login-button">Login</button>
+          </div>
+        </nav>
+      </header>
+
+      <section class="top-bar" data-reveal>
         <div>
           <p class="eyebrow">AI Powered Smart Community Problem Detection</p>
-          <h1>Complaint Monitoring & Civic Routing</h1>
+          <h1>From citizen reports to authority-ready action.</h1>
+          <p class="hero-copy">
+            A responsive civic web app that helps communities report issues, classify them with AI, map the affected
+            area, and prepare formal complaint reports for municipal escalation.
+          </p>
+          <div class="hero-cta-row">
+            <a href="#reportFormWorkspace" class="hero-link primary-link">Report an Issue</a>
+            <a href="#mapWorkspace" class="hero-link ghost-link">View Complaint Map</a>
+          </div>
+          <div class="hero-stat-grid">
+            <article class="hero-stat-card">
+              <span>AI Triage</span>
+              <strong>Text + image-based complaint understanding</strong>
+            </article>
+            <article class="hero-stat-card">
+              <span>Formal Escalation</span>
+              <strong>PDF reports and authority-ready email flow</strong>
+            </article>
+            <article class="hero-stat-card">
+              <span>Responsive Access</span>
+              <strong>Built for desktop, tablet, and mobile users</strong>
+            </article>
+          </div>
         </div>
-        <div class="top-bar-actions">
-          <button type="button" id="audioToggleBtn" class="chip-button">Sound On</button>
-          <button type="button" id="issueTokenBtn" class="login-button">Login</button>
+        <div class="hero-highlights">
+          <article class="highlight-strip">
+            <span>Operational clarity</span>
+            <strong>Complaint reporting, AI detection, routing, and monitoring in one polished workflow</strong>
+          </article>
+          <article class="highlight-strip">
+            <span>Government-ready output</span>
+            <strong>Generate formal complaint PDFs and prepare authority communication without leaving the app</strong>
+          </article>
         </div>
       </section>
 
-      <section class="role-strip">
+      <section class="role-strip" data-reveal>
         <div class="session-panel">
+          <span class="section-kicker">Session</span>
           <strong id="authRole">No role authenticated</strong>
           <p id="authTokenState">Press login to continue as Citizen or Admin</p>
           <div id="authPermissions" class="permission-grid"></div>
         </div>
         <div class="session-panel">
-          <strong>Active account</strong>
+          <span class="section-kicker">Active account</span>
+          <strong>Current user</strong>
           <p id="activeUsername">No username logged in</p>
         </div>
       </section>
 
-      <p id="dashboardMessage" class="dashboard-banner">
+      <p id="dashboardMessage" class="dashboard-banner" data-reveal>
         New complaints are added live to the complaint queue after AI analysis.
       </p>
 
-      <section class="screen-grid">
+      <section class="screen-grid" data-reveal>
         <article id="reportWorkspace" class="screen-card hero-screen">
           <div class="screen-header">
             <span>AI Powered Smart Community Problem Detection</span>
@@ -120,9 +177,47 @@
               </div>
             </label>
             <label>
-              Text complaint
-              <textarea name="textComplaint" rows="3" placeholder="Describe the issue clearly"></textarea>
+              Complaint input type
+              <select id="complaintInputMode" name="complaintInputMode">
+                <option value="text">Text complaint</option>
+                <option value="voice">Voice transcript</option>
+              </select>
             </label>
+            <label id="typedComplaintField" class="complaint-input-panel">
+              Text complaint
+              <textarea
+                id="typedComplaintInput"
+                name="typedComplaint"
+                rows="3"
+                placeholder="Describe the issue clearly"
+              ></textarea>
+            </label>
+            <div id="voiceComplaintField" class="complaint-input-panel" hidden>
+              <label>
+                Voice transcript
+                <textarea
+                  id="voiceTranscriptInput"
+                  name="voiceTranscript"
+                  rows="4"
+                  placeholder="Upload an audio file and transcribe it into complaint text"
+                  readonly
+                ></textarea>
+              </label>
+              <div class="audio-upload-group">
+                <label class="audio-upload-label">
+                  Upload audio
+                  <input type="file" id="voiceAudioFile" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg" />
+                </label>
+                <button type="button" id="transcribeAudioBtn" class="secondary-button">Transcribe Audio</button>
+              </div>
+              <audio id="voiceAudioPreview" class="voice-audio-preview" controls hidden></audio>
+              <div class="voice-actions">
+                <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
+              </div>
+              <p id="voiceTranscriptStatus" class="helper-text">
+                Select Voice transcript, upload an audio file, and transcribe it into complaint text.
+              </p>
+            </div>
             <label>
               AI Description
               <textarea
@@ -207,17 +302,26 @@
         </article>
       </section>
 
-      <footer class="page-footer">
+      <footer class="page-footer" data-reveal>
         <p class="footer-title">AI Powered Smart Community Problem Detection System</p>
-        <p class="footer-links">
-          <strong><a href="https://bbmp.gov.in/home" target="_blank" rel="noreferrer noopener">BBMP General Portal</a></strong>
-        </p>
-        <p class="footer-links">
-          <strong><a href="https://nammabengaluru.org.in/home/department/list?displayName=BBMP" target="_blank" rel="noreferrer noopener">BBMP Complaint Portal</a></strong>
-        </p>
-        <p class="footer-creators">
-          Created by Raghavendra Shetty, Rohan P, Shreyas Shashidhar and Srujan S Gowda
-        </p>
+        <div class="footer-meta">
+          <section class="footer-links-block">
+            <p class="footer-section-title">BBMP links</p>
+            <p class="footer-links">
+              <strong><a href="https://bbmp.gov.in/home" target="_blank" rel="noreferrer noopener">BBMP General Portal</a></strong>
+            </p>
+            <p class="footer-links">
+              <strong><a href="https://nammabengaluru.org.in/home/department/list?displayName=BBMP" target="_blank" rel="noreferrer noopener">BBMP Complaint Portal</a></strong>
+            </p>
+          </section>
+          <section class="footer-credits">
+            <p class="footer-section-title">Created by</p>
+            <p class="footer-creators">Raghavendra Shetty</p>
+            <p class="footer-creators">Rohan P</p>
+            <p class="footer-creators">Shreyas Shashidhar</p>
+            <p class="footer-creators">Srujan S Gowda</p>
+          </section>
+        </div>
       </footer>
     </div>
 

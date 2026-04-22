@@ -15,7 +15,7 @@ This project now follows the architecture you described:
 - `src/`
   Express backend with routes, controllers, models, middleware, and services
 - `ai_service/`
-  Flask microservice that analyzes complaint text and image-derived features
+  Flask microservice that analyzes complaint text, image-derived features, and uploaded audio transcription
 - `receipts/`
   Auto-generated maintenance payment receipts after successful Razorpay verification
 
@@ -61,6 +61,10 @@ Python dependencies:
 ```bash
 pip install -r ai_service/requirements.txt
 ```
+
+Note:
+- Audio transcription now uses `faster-whisper` in the Flask AI service.
+- The first transcription request may take longer because the Whisper model may need to initialize or download.
 
 Seed MongoDB Atlas with demo complaints and users:
 

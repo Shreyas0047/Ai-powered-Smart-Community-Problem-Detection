@@ -1,5 +1,15 @@
 const form = document.getElementById("complaintForm");
 const reportLocationInput = document.getElementById("reportLocation");
+const complaintInputMode = document.getElementById("complaintInputMode");
+const typedComplaintField = document.getElementById("typedComplaintField");
+const typedComplaintInput = document.getElementById("typedComplaintInput");
+const voiceComplaintField = document.getElementById("voiceComplaintField");
+const voiceTranscriptInput = document.getElementById("voiceTranscriptInput");
+const voiceAudioFileInput = document.getElementById("voiceAudioFile");
+const voiceAudioPreview = document.getElementById("voiceAudioPreview");
+const voiceAudioMeta = document.getElementById("voiceAudioMeta");
+const transcribeAudioBtn = document.getElementById("transcribeAudioBtn");
+const voiceTranscriptStatus = document.getElementById("voiceTranscriptStatus");
 const imageFileInput = document.getElementById("imageFile");
 const aiImageDescription = document.getElementById("aiImageDescription");
 const uploadPreview = document.getElementById("uploadPreview");
@@ -17,6 +27,7 @@ const emailProgressLabel = document.getElementById("emailProgressLabel");
 const emailProgressValue = document.getElementById("emailProgressValue");
 const emailProgressFill = document.getElementById("emailProgressFill");
 const audioToggleBtn = document.getElementById("audioToggleBtn");
+const testMicrophoneBtn = document.getElementById("testMicrophoneBtn");
 const dashboardMessage = document.getElementById("dashboardMessage");
 const issueTokenBtn = document.getElementById("issueTokenBtn");
 const authRole = document.getElementById("authRole");
@@ -29,6 +40,8 @@ const closeAuthBtn = document.getElementById("closeAuthBtn");
 const authForm = document.getElementById("authForm");
 const authSubmitBtn = document.getElementById("authSubmitBtn");
 const authMessage = document.getElementById("authMessage");
+const mobileMenuToggle = document.getElementById("mobileMenuToggle");
+const siteNav = document.getElementById("siteNav");
 const showLoginBtn = document.getElementById("showLoginBtn");
 const showRegisterBtn = document.getElementById("showRegisterBtn");
 const userManagementList = document.getElementById("userManagementList");
@@ -63,6 +76,9 @@ let ambienceGain = null;
 let ambienceTimer = null;
 let ambienceStarted = false;
 let emailProgressTimer = null;
+let lastMicrophoneAccessState = "unknown";
+let currentVoiceAudioData = null;
+let currentVoiceAudioObjectUrl = null;
 
 const permissionMeta = {
   submit_complaint: { label: "Submit Complaint", target: () => reportFormWorkspace },
@@ -375,11 +391,9 @@ function clearAuthState(message) {
 }
 
 function loadSavedAuthState() {
+  authState = null;
   try {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      authState = JSON.parse(saved);
-    }
+    localStorage.removeItem(storageKey);
   } catch (_error) {
     authState = null;
   }
@@ -389,6 +403,10 @@ function openAuthOverlay(mode = "login") {
   authMode = mode;
   authOverlay.hidden = false;
   document.body.classList.add("auth-open");
+  if (siteNav?.classList.contains("is-open")) {
+    siteNav.classList.remove("is-open");
+    mobileMenuToggle?.setAttribute("aria-expanded", "false");
+  }
   showLoginBtn.classList.toggle("is-active", mode === "login");
   showRegisterBtn.classList.toggle("is-active", mode === "register");
   authSubmitBtn.textContent = mode === "login" ? "Login" : "Register";
@@ -399,6 +417,10 @@ function openAuthOverlay(mode = "login") {
 }
 
 function closeAuthOverlay() {
+  if (!authState?.token) {
+    authMessage.textContent = "Login is required to access the dashboard.";
+    return;
+  }
   authOverlay.hidden = true;
   document.body.classList.remove("auth-open");
 }
@@ -414,6 +436,60 @@ function scrollToWorkspace(element, message) {
   if (message) {
     setDashboardMessage(message, "success");
   }
+}
+
+function toggleMobileMenu(forceState) {
+  if (!siteNav || !mobileMenuToggle) {
+    return;
+  }
+
+  const nextState = typeof forceState === "boolean" ? forceState : !siteNav.classList.contains("is-open");
+  siteNav.classList.toggle("is-open", nextState);
+  mobileMenuToggle.setAttribute("aria-expanded", String(nextState));
+}
+
+function setupMobileMenu() {
+  if (!siteNav || !mobileMenuToggle) {
+    return;
+  }
+
+  mobileMenuToggle.addEventListener("click", () => toggleMobileMenu());
+
+  siteNav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => toggleMobileMenu(false));
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 720) {
+      toggleMobileMenu(false);
+    }
+  });
+}
+
+function setupRevealAnimations() {
+  const revealElements = document.querySelectorAll("[data-reveal]");
+  if (!revealElements.length) {
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    },
+    {
+      threshold: 0.14,
+      rootMargin: "0px 0px -40px 0px"
+    }
+  );
+
+  revealElements.forEach((element) => observer.observe(element));
 }
 
 function renderPermissions(permissions = []) {
@@ -1329,6 +1405,211 @@ function renderMap(complaints) {
   `;
 }
 
+function updateVoiceTranscriptValue(finalText, interimText = "") {
+  voiceTranscriptInput.value = [finalText.trim(), interimText.trim()].filter(Boolean).join(" ").trim();
+}
+
+async function getMicrophonePermissionState() {
+  if (!navigator.permissions?.query) {
+    return "unknown";
+  }
+
+  try {
+    const result = await navigator.permissions.query({ name: "microphone" });
+    return result.state || "unknown";
+  } catch (_error) {
+    return "unknown";
+  }
+}
+
+function isBraveBrowser() {
+  return Boolean(navigator.brave);
+}
+
+async function verifyMicrophoneAccess() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    lastMicrophoneAccessState = "unknown";
+    return "unknown";
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    lastMicrophoneAccessState = "granted";
+    return "granted";
+  } catch (error) {
+    if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
+      lastMicrophoneAccessState = "denied";
+      return "denied";
+    }
+
+    lastMicrophoneAccessState = "unavailable";
+    return "unavailable";
+  }
+}
+
+async function runMicrophoneDiagnostic() {
+  testMicrophoneBtn.disabled = true;
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setDashboardMessage("This browser does not support direct microphone capture testing.", "error");
+      return;
+    }
+
+    setDashboardMessage("Testing microphone access...", "info");
+    const microphoneState = await verifyMicrophoneAccess();
+
+    if (microphoneState === "granted") {
+      setDashboardMessage("Microphone test passed. Raw microphone capture is available for this page.", "success");
+      return;
+    }
+
+    if (microphoneState === "denied") {
+      setDashboardMessage(
+        "Microphone test failed. Access is blocked for this page or by Windows privacy settings.",
+        "error"
+      );
+      return;
+    }
+
+    setDashboardMessage(
+      "Microphone test could not find a working input device. Check the selected microphone in Windows sound settings.",
+      "error"
+    );
+  } catch (_error) {
+    setDashboardMessage("Microphone test could not complete. Check browser and system microphone settings.", "error");
+  } finally {
+    testMicrophoneBtn.disabled = false;
+  }
+}
+
+function clearVoiceAudioSelection() {
+  if (currentVoiceAudioObjectUrl) {
+    URL.revokeObjectURL(currentVoiceAudioObjectUrl);
+    currentVoiceAudioObjectUrl = null;
+  }
+
+  currentVoiceAudioData = null;
+  voiceAudioPreview.hidden = true;
+  voiceAudioPreview.removeAttribute("src");
+  voiceAudioMeta.textContent = "No audio file selected.";
+}
+
+async function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Unable to prepare the uploaded file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function setupVoiceAudioFile() {
+  const file = voiceAudioFileInput.files?.[0];
+  clearVoiceAudioSelection();
+  updateVoiceTranscriptValue("");
+
+  if (!file) {
+    voiceTranscriptStatus.textContent = "Upload an audio file to generate a complaint transcript.";
+    return;
+  }
+
+  currentVoiceAudioObjectUrl = URL.createObjectURL(file);
+  voiceAudioPreview.src = currentVoiceAudioObjectUrl;
+  voiceAudioPreview.hidden = false;
+  voiceAudioMeta.textContent = `${file.name} - ${file.type || "audio"} - ${Math.max(1, Math.round(file.size / 1024))} KB`;
+  currentVoiceAudioData = {
+    filename: file.name,
+    mimeType: file.type || "application/octet-stream",
+    dataUrl: await readFileAsDataUrl(file)
+  };
+  voiceTranscriptStatus.textContent = "Audio file ready. Click Transcribe Audio to convert it into complaint text.";
+}
+
+async function transcribeUploadedAudio() {
+  if (!currentVoiceAudioData?.dataUrl) {
+    voiceTranscriptStatus.textContent = "Upload an audio file before requesting transcription.";
+    return;
+  }
+
+  transcribeAudioBtn.disabled = true;
+  voiceTranscriptStatus.textContent = "Uploading audio to the AI service for transcription...";
+
+  try {
+    const response = await apiRequest("/api/transcribe-audio", {
+      method: "POST",
+      body: JSON.stringify({
+        audioBase64: currentVoiceAudioData.dataUrl,
+        filename: currentVoiceAudioData.filename,
+        mimeType: currentVoiceAudioData.mimeType
+      })
+    });
+
+    updateVoiceTranscriptValue(response.transcript || "");
+    voiceTranscriptStatus.textContent = response.transcript
+      ? "Audio transcribed successfully. Review the transcript before submitting."
+      : "The AI service did not return any transcript text.";
+  } catch (error) {
+    voiceTranscriptStatus.textContent = error.message;
+  } finally {
+    transcribeAudioBtn.disabled = false;
+  }
+}
+
+function setComplaintInputMode(mode) {
+  const isVoiceMode = mode === "voice";
+
+  typedComplaintField.hidden = isVoiceMode;
+  typedComplaintInput.disabled = isVoiceMode;
+  voiceComplaintField.hidden = !isVoiceMode;
+  voiceTranscriptInput.disabled = !isVoiceMode;
+
+  if (isVoiceMode) {
+    transcribeAudioBtn.disabled = !currentVoiceAudioData?.dataUrl;
+    if (!voiceTranscriptInput.value.trim()) {
+      voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
+        ? "Audio file ready. Click Transcribe Audio to convert it into complaint text."
+        : "Upload an audio file and click Transcribe Audio to generate complaint text.";
+    }
+    return;
+  }
+
+  voiceTranscriptStatus.textContent = "Select Voice transcript to upload an audio file and convert it into complaint text.";
+}
+
+function getComplaintTextPayload() {
+  const mode = complaintInputMode.value;
+  const complaintText = mode === "voice" ? voiceTranscriptInput.value.trim() : typedComplaintInput.value.trim();
+
+  if (!complaintText) {
+    throw new Error(
+      mode === "voice"
+        ? "Record a voice transcript before submitting the complaint."
+        : "Enter the complaint text before submitting."
+    );
+  }
+
+  return {
+    complaintInputMode: mode,
+    complaintText
+  };
+}
+
+function setupComplaintInputMode() {
+  complaintInputMode.addEventListener("change", (event) => {
+    setComplaintInputMode(event.target.value);
+  });
+
+  voiceAudioFileInput.addEventListener("change", () => {
+    setupVoiceAudioFile().catch((error) => {
+      clearVoiceAudioSelection();
+      voiceTranscriptStatus.textContent = error.message;
+    });
+  });
+  transcribeAudioBtn.addEventListener("click", transcribeUploadedAudio);
+}
+
 function renderLoggedOutState() {
   renderMetrics({ totalComplaints: 0, openComplaints: 0 });
   document.getElementById("recentComplaints").innerHTML = `<div class="table-row empty-state"><span>Login to view recent complaints.</span></div>`;
@@ -1383,6 +1664,10 @@ function resetComposer() {
   emailProgressValue.textContent = "0%";
   emailProgressLabel.textContent = "Preparing complaint email...";
   updateLiveLocationMap("");
+  clearVoiceAudioSelection();
+  updateVoiceTranscriptValue("");
+  transcribeAudioBtn.disabled = true;
+  setComplaintInputMode(complaintInputMode.value || "text");
 }
 
 function loadImageElement(file) {
@@ -1591,6 +1876,7 @@ audioToggleBtn.addEventListener("click", async () => {
     setDashboardMessage("Interface sound muted.", "info");
   }
 });
+testMicrophoneBtn.addEventListener("click", runMicrophoneDiagnostic);
 reportLocationInput.addEventListener("input", (event) => {
   updateLiveLocationMap(event.target.value);
 });
@@ -1671,7 +1957,10 @@ form.addEventListener("submit", async (event) => {
     const formData = new FormData(event.target);
     const payload = Object.fromEntries(formData.entries());
     const imageFile = imageFileInput.files[0];
+    const complaintPayload = getComplaintTextPayload();
 
+    payload.textComplaint = complaintPayload.complaintText;
+    payload.complaintInputMode = complaintPayload.complaintInputMode;
     payload.iotTriggered = false;
     payload.imageFeatures = currentImageFeatures || (await extractImageFeatures(imageFile));
     payload.imageHint = aiImageDescription.value.trim();
@@ -1717,10 +2006,14 @@ resetDashboardBtn.addEventListener("click", async () => {
 loadSavedAuthState();
 loadAudioPreference();
 setupImageUpload();
+setupComplaintInputMode();
+setupMobileMenu();
+setupRevealAnimations();
 applyPermissionState();
 updateAudioToggleState();
 setPdfButtonState(false);
 resetComposer();
+openAuthOverlay("login");
 loadDashboard().catch((error) => {
   setDashboardMessage(error.message, "error");
 });
