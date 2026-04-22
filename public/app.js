@@ -8,6 +8,7 @@ const voiceTranscriptInput = document.getElementById("voiceTranscriptInput");
 const voiceAudioFileInput = document.getElementById("voiceAudioFile");
 const voiceAudioPreview = document.getElementById("voiceAudioPreview");
 const voiceAudioMeta = document.getElementById("voiceAudioMeta");
+const transcribeAudioBtn = document.getElementById("transcribeAudioBtn");
 const voiceTranscriptStatus = document.getElementById("voiceTranscriptStatus");
 const imageFileInput = document.getElementById("imageFile");
 const aiImageDescription = document.getElementById("aiImageDescription");
@@ -1635,6 +1636,9 @@ async function setupVoiceAudioFile() {
   updateVoiceTranscriptValue(existingTranscript);
 
   if (!file) {
+    if (transcribeAudioBtn) {
+      transcribeAudioBtn.disabled = true;
+    }
     voiceTranscriptStatus.textContent = existingTranscript
       ? "Audio removed. You can still submit the typed voice complaint summary."
       : "Upload an audio file and type the complaint summary manually.";
@@ -1650,9 +1654,49 @@ async function setupVoiceAudioFile() {
     mimeType: file.type || "application/octet-stream",
     dataUrl: await readFileAsDataUrl(file)
   };
+  if (transcribeAudioBtn) {
+    transcribeAudioBtn.disabled = false;
+  }
   voiceTranscriptStatus.textContent = existingTranscript
     ? "Audio file attached. Review your typed summary and submit the complaint."
-    : "Audio file ready. Type the complaint summary manually before submitting.";
+    : "Audio file ready. Click Transcribe Audio or type the complaint summary manually.";
+}
+
+async function transcribeUploadedAudio() {
+  const file = voiceAudioFileInput.files?.[0];
+  if (!file) {
+    voiceTranscriptStatus.textContent = "Upload an audio file before requesting transcription.";
+    return;
+  }
+
+  if (!window.browserAudioTranscriber?.transcribeAudioFile) {
+    voiceTranscriptStatus.textContent =
+      "Browser transcription is unavailable here. Type the complaint summary manually.";
+    return;
+  }
+
+  transcribeAudioBtn.disabled = true;
+
+  try {
+    const result = await window.browserAudioTranscriber.transcribeAudioFile(file, (statusText) => {
+      voiceTranscriptStatus.textContent = statusText;
+    });
+
+    if (!result.text) {
+      voiceTranscriptStatus.textContent =
+        "No transcript text was produced. Type the complaint summary manually.";
+      return;
+    }
+
+    updateVoiceTranscriptValue(result.text);
+    voiceTranscriptStatus.textContent =
+      "Audio transcribed in the browser. Review the text before submitting.";
+  } catch (error) {
+    voiceTranscriptStatus.textContent =
+      error?.message || "Audio transcription failed in the browser. Type the complaint summary manually.";
+  } finally {
+    transcribeAudioBtn.disabled = !voiceAudioFileInput.files?.[0];
+  }
 }
 
 function setComplaintInputMode(mode) {
@@ -1666,9 +1710,12 @@ function setComplaintInputMode(mode) {
   voiceTranscriptInput.disabled = !isVoiceMode;
 
   if (isVoiceMode) {
+    if (transcribeAudioBtn) {
+      transcribeAudioBtn.disabled = !currentVoiceAudioData?.dataUrl;
+    }
     if (!voiceTranscriptInput.value.trim()) {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
-        ? "Audio file attached. Type the complaint summary manually before submitting."
+        ? "Audio file attached. Click Transcribe Audio or type the complaint summary manually."
         : "Upload an audio file and type the complaint summary manually.";
     } else {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
@@ -1707,9 +1754,13 @@ function setupComplaintInputMode() {
   voiceAudioFileInput.addEventListener("change", () => {
     setupVoiceAudioFile().catch((error) => {
       clearVoiceAudioSelection();
+      if (transcribeAudioBtn) {
+        transcribeAudioBtn.disabled = true;
+      }
       voiceTranscriptStatus.textContent = error.message;
     });
   });
+  transcribeAudioBtn?.addEventListener("click", transcribeUploadedAudio);
   voiceTranscriptInput.addEventListener("input", () => {
     if (complaintInputMode.value !== "voice") {
       return;
@@ -1782,6 +1833,9 @@ function resetComposer() {
   updateLiveLocationMap("");
   clearVoiceAudioSelection();
   updateVoiceTranscriptValue("");
+  if (transcribeAudioBtn) {
+    transcribeAudioBtn.disabled = true;
+  }
   setComplaintInputMode(complaintInputMode.value || "text");
 }
 

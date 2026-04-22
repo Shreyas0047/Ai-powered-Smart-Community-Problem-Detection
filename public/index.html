@@ -271,13 +271,14 @@
                       Upload audio
                       <input type="file" id="voiceAudioFile" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg" />
                     </label>
+                    <button type="button" id="transcribeAudioBtn" class="secondary-button">Transcribe Audio</button>
                   </div>
                   <audio id="voiceAudioPreview" class="voice-audio-preview" controls hidden></audio>
                   <div class="voice-actions">
                     <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
                   </div>
                   <p id="voiceTranscriptStatus" class="helper-text">
-                    Select Voice transcript, upload the voice note, and type the complaint summary manually.
+                    Select Voice transcript, upload the voice note, then either transcribe it or type the complaint summary manually.
                   </p>
                 </div>
                 <label>
@@ -420,6 +421,7 @@
       </footer>
     </div>
 
+    <script type="module" src="/audio-transcriber.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
