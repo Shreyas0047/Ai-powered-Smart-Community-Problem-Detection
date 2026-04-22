@@ -61,6 +61,49 @@ select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
 }
 
+.gooey-filter-defs {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+@keyframes gooeyMoveInCircle {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gooeyMoveVertical {
+  0% {
+    transform: translateY(-40%);
+  }
+  50% {
+    transform: translateY(40%);
+  }
+  100% {
+    transform: translateY(-40%);
+  }
+}
+
+@keyframes gooeyMoveHorizontal {
+  0% {
+    transform: translateX(-40%) translateY(-8%);
+  }
+  50% {
+    transform: translateX(40%) translateY(8%);
+  }
+  100% {
+    transform: translateX(-40%) translateY(-8%);
+  }
+}
+
 .page-shell {
   position: relative;
   width: min(1220px, calc(100% - 32px));
@@ -276,6 +319,107 @@ button:disabled {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(22px);
+}
+
+.soft-hero > :not(.gooey-surface),
+.auth-screen > :not(.gooey-surface) {
+  position: relative;
+  z-index: 2;
+}
+
+.gooey-surface {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gooey-gradient-field {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(255, 183, 178, 0.32), transparent 26%),
+    radial-gradient(circle at 84% 22%, rgba(239, 237, 244, 0.6), transparent 24%),
+    linear-gradient(135deg, rgba(255, 250, 244, 0.96), rgba(247, 243, 252, 0.92) 48%, rgba(232, 239, 232, 0.88));
+}
+
+.gooey-gradients {
+  position: absolute;
+  inset: 0;
+  filter: url(#soft-goo) blur(32px);
+}
+
+.gooey-blob,
+.gooey-interactive {
+  position: absolute;
+  mix-blend-mode: hard-light;
+  opacity: 0.88;
+}
+
+.gooey-blob {
+  width: 74%;
+  height: 74%;
+}
+
+.gooey-blob-1 {
+  top: 8%;
+  left: 12%;
+  background: radial-gradient(circle at center, rgba(255, 183, 178, 0.7) 0, rgba(255, 183, 178, 0) 55%) no-repeat;
+  animation: gooeyMoveVertical 30s ease infinite;
+}
+
+.gooey-blob-2 {
+  top: 12%;
+  left: 28%;
+  background: radial-gradient(circle at center, rgba(232, 239, 232, 0.76) 0, rgba(232, 239, 232, 0) 55%) no-repeat;
+  transform-origin: calc(50% - 240px);
+  animation: gooeyMoveInCircle 22s reverse infinite;
+}
+
+.gooey-blob-3 {
+  top: 30%;
+  left: -14%;
+  background: radial-gradient(circle at center, rgba(239, 237, 244, 0.82) 0, rgba(239, 237, 244, 0) 56%) no-repeat;
+  transform-origin: calc(50% + 260px);
+  animation: gooeyMoveInCircle 40s linear infinite;
+}
+
+.gooey-blob-4 {
+  top: 16%;
+  left: 30%;
+  background: radial-gradient(circle at center, rgba(255, 207, 156, 0.66) 0, rgba(255, 207, 156, 0) 55%) no-repeat;
+  transform-origin: calc(50% - 160px);
+  animation: gooeyMoveHorizontal 32s ease infinite;
+  opacity: 0.72;
+}
+
+.gooey-blob-5 {
+  width: 100%;
+  height: 100%;
+  top: -8%;
+  left: 8%;
+  background: radial-gradient(circle at center, rgba(201, 225, 255, 0.58) 0, rgba(201, 225, 255, 0) 52%) no-repeat;
+  transform-origin: calc(50% - 440px) calc(50% + 120px);
+  animation: gooeyMoveInCircle 26s ease infinite;
+  opacity: 0.64;
+}
+
+.gooey-interactive {
+  width: 100%;
+  height: 100%;
+  top: -50%;
+  left: -50%;
+  background: radial-gradient(circle at center, rgba(255, 183, 178, 0.72) 0, rgba(255, 183, 178, 0) 52%) no-repeat;
+  opacity: 0.58;
+  will-change: transform;
+}
+
+.gooey-surface-auth .gooey-gradient-field {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 183, 178, 0.32), transparent 28%),
+    radial-gradient(circle at 78% 18%, rgba(239, 237, 244, 0.58), transparent 30%),
+    linear-gradient(155deg, rgba(255, 251, 248, 0.96), rgba(246, 241, 252, 0.9) 52%, rgba(232, 239, 232, 0.84));
 }
 
 .soft-hero {

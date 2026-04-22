@@ -15,9 +15,35 @@
   </head>
   <body>
     <div class="grain-overlay" aria-hidden="true"></div>
+    <svg class="gooey-filter-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="soft-goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feColorMatrix
+            in="blur"
+            mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
+            result="goo"
+          />
+          <feBlend in="SourceGraphic" in2="goo" />
+        </filter>
+      </defs>
+    </svg>
 
     <div id="authOverlay" class="auth-overlay" hidden>
       <div class="auth-screen">
+        <div class="gooey-surface gooey-surface-auth" data-gooey aria-hidden="true">
+          <div class="gooey-gradient-field">
+            <div class="gooey-gradients">
+              <div class="gooey-blob gooey-blob-1"></div>
+              <div class="gooey-blob gooey-blob-2"></div>
+              <div class="gooey-blob gooey-blob-3"></div>
+              <div class="gooey-blob gooey-blob-4"></div>
+              <div class="gooey-blob gooey-blob-5"></div>
+              <div class="gooey-interactive"></div>
+            </div>
+          </div>
+        </div>
         <div class="auth-screen-top">
           <div>
             <h2>Login or Register</h2>
@@ -125,8 +151,18 @@
 
       <main class="soft-main">
         <section class="soft-hero" data-reveal>
-          <div class="hero-blob hero-blob-coral"></div>
-          <div class="hero-blob hero-blob-lavender"></div>
+          <div class="gooey-surface gooey-surface-hero" data-gooey aria-hidden="true">
+            <div class="gooey-gradient-field">
+              <div class="gooey-gradients">
+                <div class="gooey-blob gooey-blob-1"></div>
+                <div class="gooey-blob gooey-blob-2"></div>
+                <div class="gooey-blob gooey-blob-3"></div>
+                <div class="gooey-blob gooey-blob-4"></div>
+                <div class="gooey-blob gooey-blob-5"></div>
+                <div class="gooey-interactive"></div>
+              </div>
+            </div>
+          </div>
           <div class="hero-copy-wrap">
             <p class="eyebrow dark">AI Powered Smart Community Problem Detection</p>
             <h1>A easier way to report what your neighbourhood needs.</h1>

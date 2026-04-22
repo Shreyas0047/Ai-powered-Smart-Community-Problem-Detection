@@ -514,6 +514,58 @@ function setupRevealAnimations() {
   revealElements.forEach((element) => observer.observe(element));
 }
 
+function setupGooeyInteractions() {
+  const gooeySurfaces = document.querySelectorAll("[data-gooey]");
+
+  gooeySurfaces.forEach((surface) => {
+    if (surface.dataset.gooeyBound === "true") {
+      return;
+    }
+
+    const interactiveBlob = surface.querySelector(".gooey-interactive");
+    const eventSurface = surface.parentElement || surface;
+    if (!interactiveBlob) {
+      return;
+    }
+
+    let currentX = 0;
+    let currentY = 0;
+    let targetX = 0;
+    let targetY = 0;
+    let frameId = null;
+
+    function setTargetToCenter() {
+      targetX = eventSurface.clientWidth / 2;
+      targetY = eventSurface.clientHeight / 2;
+    }
+
+    function updateTargetFromPointer(event) {
+      const rect = eventSurface.getBoundingClientRect();
+      targetX = event.clientX - rect.left;
+      targetY = event.clientY - rect.top;
+    }
+
+    function animateBlob() {
+      currentX += (targetX - currentX) / 18;
+      currentY += (targetY - currentY) / 18;
+      interactiveBlob.style.transform = `translate(${Math.round(currentX - eventSurface.clientWidth / 2)}px, ${Math.round(currentY - eventSurface.clientHeight / 2)}px)`;
+      frameId = window.requestAnimationFrame(animateBlob);
+    }
+
+    setTargetToCenter();
+    currentX = targetX;
+    currentY = targetY;
+
+    eventSurface.addEventListener("pointermove", updateTargetFromPointer);
+    eventSurface.addEventListener("pointerleave", setTargetToCenter);
+    window.addEventListener("resize", setTargetToCenter);
+
+    frameId = window.requestAnimationFrame(animateBlob);
+
+    surface.dataset.gooeyBound = "true";
+  });
+}
+
 function renderPermissions(permissions = []) {
   authPermissions.innerHTML = permissions
     .map((permission) => {
@@ -2184,6 +2236,7 @@ setupImageUpload();
 setupComplaintInputMode();
 setupMobileMenu();
 setupRevealAnimations();
+setupGooeyInteractions();
 applyPermissionState();
 updateAudioToggleState();
 setPdfButtonState(false);
