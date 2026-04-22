@@ -7,20 +7,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Reenie+Beanie&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
+    <div class="grain-overlay" aria-hidden="true"></div>
+
     <div id="authOverlay" class="auth-overlay" hidden>
       <div class="auth-screen">
         <div class="auth-screen-top">
           <div>
-            <p class="eyebrow">Access Portal</p>
             <h2>Login or Register</h2>
-            <p class="auth-intro">Sign in first to open the civic dashboard and complaint management workspace.</p>
+            <p class="auth-intro">Sign in to open the full civic dashboard, AI reporting flow, and administrative controls.</p>
           </div>
           <button type="button" id="closeAuthBtn" class="chip-button">Back</button>
         </div>
@@ -50,11 +51,58 @@
       </div>
     </div>
 
+    <div id="faqOverlay" class="faq-overlay" hidden>
+      <div class="faq-modal">
+        <div class="faq-modal-top">
+          <div>
+            <p class="eyebrow dark">FAQ</p>
+            <h2>Common questions about the live workflow.</h2>
+            <p class="auth-intro">The popup uses the same Softly styling as the rest of the dashboard while keeping the same FAQ content.</p>
+          </div>
+          <button type="button" id="closeFaqBtn" class="chip-button">Close</button>
+        </div>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>
+              <span>Can citizens still submit complaints exactly the same way?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-content">
+              <p>Yes. The visual design has changed, but the core complaint flow, AI analysis, PDF generation, BBMP email, map preview, and admin permissions are preserved.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>Does the admin dashboard still control alerts, status updates, and reset?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-content">
+              <p>Yes. Admin-only actions remain connected to the same permission-based backend routes. This redesign changes presentation, not authorization logic.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>What changed for voice input?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-content">
+              <p>Voice mode now supports audio-file upload and backend transcription, which is more reliable across devices than browser speech recognition.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
     <div id="mainDashboard" class="page-shell">
       <header class="site-header">
         <a href="#mainDashboard" class="brand-lockup">
-          <span class="brand-kicker">Government-ready civic AI</span>
-          <strong>Smart Community Problem Detection</strong>
+          <span class="brand-mark">
+            <span class="brand-mark-dot"></span>
+          </span>
+          <span class="brand-copy">
+            <span class="brand-kicker">Digital wellness for civic action</span>
+            <strong>AI Smart Community System</strong>
+          </span>
         </a>
         <button type="button" id="mobileMenuToggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="siteNav">
           <span></span>
@@ -63,7 +111,7 @@
         </button>
         <nav id="siteNav" class="site-nav">
           <a href="#reportFormWorkspace" class="nav-link">Report</a>
-          <a href="#complaintsWorkspace" class="nav-link">Complaints</a>
+          <a href="#complaintsWorkspace" class="nav-link">Diary</a>
           <a href="#adminWorkspace" class="nav-link">Dashboard</a>
           <a href="#alertsWorkspace" class="nav-link">Alerts</a>
           <a href="#mapWorkspace" class="nav-link">Map</a>
@@ -75,232 +123,278 @@
         </nav>
       </header>
 
-      <section class="top-bar" data-reveal>
-        <div>
-          <p class="eyebrow">AI Powered Smart Community Problem Detection</p>
-          <h1>From citizen reports to authority-ready action.</h1>
-          <p class="hero-copy">
-            A responsive civic web app that helps communities report issues, classify them with AI, map the affected
-            area, and prepare formal complaint reports for municipal escalation.
-          </p>
-          <div class="hero-cta-row">
-            <a href="#reportFormWorkspace" class="hero-link primary-link">Report an Issue</a>
-            <a href="#mapWorkspace" class="hero-link ghost-link">View Complaint Map</a>
-          </div>
-          <div class="hero-stat-grid">
-            <article class="hero-stat-card">
-              <span>AI Triage</span>
-              <strong>Text + image-based complaint understanding</strong>
-            </article>
-            <article class="hero-stat-card">
-              <span>Formal Escalation</span>
-              <strong>PDF reports and authority-ready email flow</strong>
-            </article>
-            <article class="hero-stat-card">
-              <span>Responsive Access</span>
-              <strong>Built for desktop, tablet, and mobile users</strong>
-            </article>
-          </div>
-        </div>
-        <div class="hero-highlights">
-          <article class="highlight-strip">
-            <span>Operational clarity</span>
-            <strong>Complaint reporting, AI detection, routing, and monitoring in one polished workflow</strong>
-          </article>
-          <article class="highlight-strip">
-            <span>Government-ready output</span>
-            <strong>Generate formal complaint PDFs and prepare authority communication without leaving the app</strong>
-          </article>
-        </div>
-      </section>
-
-      <section class="role-strip" data-reveal>
-        <div class="session-panel">
-          <span class="section-kicker">Session</span>
-          <strong id="authRole">No role authenticated</strong>
-          <p id="authTokenState">Press login to continue as Citizen or Admin</p>
-          <div id="authPermissions" class="permission-grid"></div>
-        </div>
-        <div class="session-panel">
-          <span class="section-kicker">Active account</span>
-          <strong>Current user</strong>
-          <p id="activeUsername">No username logged in</p>
-        </div>
-      </section>
-
-      <p id="dashboardMessage" class="dashboard-banner" data-reveal>
-        New complaints are added live to the complaint queue after AI analysis.
-      </p>
-
-      <section class="screen-grid" data-reveal>
-        <article id="reportWorkspace" class="screen-card hero-screen">
-          <div class="screen-header">
-            <span>AI Powered Smart Community Problem Detection</span>
-            <button type="button" id="resetDashboardBtn" class="chip-button">Reset</button>
-          </div>
-          <h2>Report Issue</h2>
-          <label class="upload-hero">
-            <input type="file" id="imageFile" name="imageFile" accept="image/*" hidden />
-            <div class="upload-box">
-              <strong>Upload a Photo of the Issue</strong>
-              <span>Tap to capture or choose an image</span>
-            </div>
-          </label>
-          <div class="upload-preview compact-preview" id="uploadPreview" hidden>
-            <img id="imagePreview" alt="Uploaded complaint preview" />
-            <div class="upload-meta">
-              <strong id="imageName">No image selected</strong>
-              <p id="imageHintText" class="helper-text">
-                The system analyzes actual image pixels in the browser before sending CV features.
-              </p>
+      <main class="soft-main">
+        <section class="soft-hero" data-reveal>
+          <div class="hero-blob hero-blob-coral"></div>
+          <div class="hero-blob hero-blob-lavender"></div>
+          <div class="hero-copy-wrap">
+            <p class="eyebrow dark">AI Powered Smart Community Problem Detection</p>
+            <h1>A easier way to report what your neighbourhood needs.</h1>
+            <p class="hero-copy">
+              Report community issues through text, image, audio, AI-assisted classification, maps, PDF escalation,
+              and admin workflows inside a single warm, mobile-first civic experience.
+            </p>
+            <div class="hero-cta-row">
+              <a href="#reportFormWorkspace" class="hero-link primary-link">Report an issue</a>
+              <a href="#mapWorkspace" class="hero-link ghost-link">See the complaint map</a>
             </div>
           </div>
-          <div>
-            <h3>Recent Complaints</h3>
-            <div id="recentComplaints" class="mini-list"></div>
+          <div class="hero-status-cluster">
+            <div class="hero-note">
+              <span>Current flow</span>
+              <strong>Citizens submit. AI classifies. Authorities get a formal complaint-ready report.</strong>
+            </div>
+            <div class="hero-note alt">
+              <span>Built for every device</span>
+              <strong>Mobile-first interaction with the same admin, PDF, BBMP email, and map features preserved.</strong>
+            </div>
           </div>
-        </article>
+        </section>
 
-        <article id="reportFormWorkspace" class="screen-card form-screen">
-          <div class="screen-titlebar">Report an Issue</div>
-          <form id="complaintForm" class="report-form">
-            <label class="location-field">
-              Location
-              <div class="location-input-row">
-                <input
-                  type="text"
-                  id="reportLocation"
-                  name="location"
-                  placeholder="Whitefield, Bangalore or village road"
-                />
-                <button type="button" id="previewLocationBtn" class="inline-map-button">Show Map</button>
+        <section class="scenario-section" data-reveal>
+          <div class="section-intro">
+            <p class="eyebrow dark">Daily moments</p>
+            <h2>The kinds of issues communities actually need to act on.</h2>
+          </div>
+          <div class="scenario-scroll" aria-label="Complaint scenarios">
+            <article class="scenario-card">
+              <span>07:10 am</span>
+              <strong>Water stagnation building up near the main entrance</strong>
+            </article>
+            <article class="scenario-card">
+              <span>09:45 am</span>
+              <strong>Fallen tree blocking the road after overnight rain</strong>
+            </article>
+            <article class="scenario-card">
+              <span>12:30 pm</span>
+              <strong>Smoke, short-circuit concern, and urgent escalation</strong>
+            </article>
+            <article class="scenario-card">
+              <span>06:05 pm</span>
+              <strong>Streetlight outage and public safety visibility issue</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="session-ribbon" data-reveal>
+          <div class="session-surface">
+            <p class="eyebrow dark">Session</p>
+            <strong id="authRole">No role authenticated</strong>
+            <p id="authTokenState">Press login to continue as Citizen or Admin</p>
+            <div id="authPermissions" class="permission-grid"></div>
+          </div>
+          <div class="session-surface">
+            <p class="eyebrow dark">Current user</p>
+            <strong>Active account</strong>
+            <p id="activeUsername">No username logged in</p>
+          </div>
+        </section>
+
+        <section class="experience-section" data-reveal>
+          <div class="section-intro centered">
+            <p class="eyebrow dark">App experience</p>
+            <h2>Three live surfaces, one calmer reporting flow.</h2>
+          </div>
+          <div class="device-stack">
+            <article id="reportWorkspace" class="device-panel device-left screen-card">
+              <div class="screen-header">
+                <span>Issue capture</span>
+                <button type="button" id="resetDashboardBtn" class="chip-button">Reset</button>
               </div>
-            </label>
-            <label>
-              Complaint input type
-              <select id="complaintInputMode" name="complaintInputMode">
-                <option value="text">Text complaint</option>
-                <option value="voice">Voice transcript</option>
-              </select>
-            </label>
-            <label id="typedComplaintField" class="complaint-input-panel">
-              Text complaint
-              <textarea
-                id="typedComplaintInput"
-                name="typedComplaint"
-                rows="3"
-                placeholder="Describe the issue clearly"
-              ></textarea>
-            </label>
-            <div id="voiceComplaintField" class="complaint-input-panel" hidden>
-              <label>
-                Voice transcript
-                <textarea
-                  id="voiceTranscriptInput"
-                  name="voiceTranscript"
-                  rows="4"
-                  placeholder="Upload an audio file and transcribe it into complaint text"
-                  readonly
-                ></textarea>
+              <h3>Report issue</h3>
+              <label class="upload-hero">
+                <input type="file" id="imageFile" name="imageFile" accept="image/*" hidden />
+                <div class="upload-box">
+                  <strong>Upload a photo of the issue</strong>
+                  <span>Tap to capture or choose an image</span>
+                </div>
               </label>
-              <div class="audio-upload-group">
-                <label class="audio-upload-label">
-                  Upload audio
-                  <input type="file" id="voiceAudioFile" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg" />
+              <div class="upload-preview compact-preview" id="uploadPreview" hidden>
+                <img id="imagePreview" alt="Uploaded complaint preview" />
+                <div class="upload-meta">
+                  <strong id="imageName">No image selected</strong>
+                  <p id="imageHintText" class="helper-text">
+                    The system analyzes actual image pixels in the browser before sending CV features.
+                  </p>
+                </div>
+              </div>
+              <div class="device-subsection">
+                <h4>Recent complaints</h4>
+                <div id="recentComplaints" class="mini-list"></div>
+              </div>
+            </article>
+
+            <article id="reportFormWorkspace" class="device-panel device-center screen-card">
+              <div class="screen-titlebar">Report an Issue</div>
+              <form id="complaintForm" class="report-form">
+                <label class="location-field">
+                  Location
+                  <div class="location-input-row">
+                    <input
+                      type="text"
+                      id="reportLocation"
+                      name="location"
+                      placeholder="Whitefield, Bangalore or village road"
+                    />
+                    <button type="button" id="useLiveLocationBtn" class="secondary-button">Live Location</button>
+                    <button type="button" id="previewLocationBtn" class="inline-map-button">Show Map</button>
+                  </div>
                 </label>
-                <button type="button" id="transcribeAudioBtn" class="secondary-button">Transcribe Audio</button>
-              </div>
-              <audio id="voiceAudioPreview" class="voice-audio-preview" controls hidden></audio>
-              <div class="voice-actions">
-                <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
-              </div>
-              <p id="voiceTranscriptStatus" class="helper-text">
-                Select Voice transcript, upload an audio file, and transcribe it into complaint text.
-              </p>
-            </div>
-            <label>
-              AI Description
-              <textarea
-                id="aiImageDescription"
-                name="imageHint"
-                rows="3"
-                placeholder="Upload an image to let AI describe what it sees"
-                readonly
-              ></textarea>
-            </label>
-            <div class="ai-actions">
-              <button type="button" id="showAiAccuracyBtn" class="secondary-button">Show AI Accuracy</button>
-              <p id="aiAccuracyStatus" class="helper-text">Upload an image to preview AI confidence.</p>
-            </div>
-            <div class="form-actions">
-              <button type="submit" id="complaintSubmitBtn">Submit Report</button>
-              <button type="button" id="generatePdfBtn" class="secondary-button" disabled>Generate PDF</button>
-              <button type="button" id="emailBbmpBtn" class="secondary-button" disabled>Email BBMP</button>
-            </div>
-            <div id="emailProgress" class="email-progress" hidden>
-              <div class="email-progress-head">
-                <strong id="emailProgressLabel">Preparing complaint email...</strong>
-                <span id="emailProgressValue">0%</span>
-              </div>
-              <div class="email-progress-track">
-                <div id="emailProgressFill" class="email-progress-fill"></div>
-              </div>
-            </div>
-          </form>
-        </article>
+                <label>
+                  Complaint input type
+                  <select id="complaintInputMode" name="complaintInputMode">
+                    <option value="text">Text complaint</option>
+                    <option value="voice">Voice transcript</option>
+                  </select>
+                </label>
+                <label id="typedComplaintField" class="complaint-input-panel">
+                  Text complaint
+                  <textarea
+                    id="typedComplaintInput"
+                    name="typedComplaint"
+                    rows="3"
+                    placeholder="Describe the issue clearly"
+                  ></textarea>
+                </label>
+                <div id="voiceComplaintField" class="complaint-input-panel" hidden>
+                  <label>
+                    Voice transcript
+                    <textarea
+                      id="voiceTranscriptInput"
+                      name="voiceTranscript"
+                      rows="4"
+                      placeholder="Upload an audio file and transcribe it into complaint text"
+                      readonly
+                    ></textarea>
+                  </label>
+                  <div class="audio-upload-group">
+                    <label class="audio-upload-label">
+                      Upload audio
+                      <input type="file" id="voiceAudioFile" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg" />
+                    </label>
+                    <button type="button" id="transcribeAudioBtn" class="secondary-button">Transcribe Audio</button>
+                  </div>
+                  <audio id="voiceAudioPreview" class="voice-audio-preview" controls hidden></audio>
+                  <div class="voice-actions">
+                    <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
+                  </div>
+                  <p id="voiceTranscriptStatus" class="helper-text">
+                    Select Voice transcript, upload an audio file, and transcribe it into complaint text.
+                  </p>
+                </div>
+                <label>
+                  AI Description
+                  <textarea
+                    id="aiImageDescription"
+                    name="imageHint"
+                    rows="3"
+                    placeholder="Upload an image to let AI describe what it sees"
+                    readonly
+                  ></textarea>
+                </label>
+                <div class="ai-actions">
+                  <button type="button" id="showAiAccuracyBtn" class="secondary-button">Show AI Accuracy</button>
+                  <p id="aiAccuracyStatus" class="helper-text">Upload an image to preview AI confidence.</p>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" id="complaintSubmitBtn">Submit Report</button>
+                  <button type="button" id="generatePdfBtn" class="secondary-button" disabled>Generate PDF</button>
+                  <button type="button" id="emailBbmpBtn" class="secondary-button" disabled>Email BBMP</button>
+                </div>
+                <div id="emailProgress" class="email-progress" hidden>
+                  <div class="email-progress-head">
+                    <strong id="emailProgressLabel">Preparing complaint email...</strong>
+                    <span id="emailProgressValue">0%</span>
+                  </div>
+                  <div class="email-progress-track">
+                    <div id="emailProgressFill" class="email-progress-fill"></div>
+                  </div>
+                </div>
+              </form>
+            </article>
 
-        <article id="complaintsWorkspace" class="screen-card complaints-screen">
-          <div class="screen-titlebar">My Complaints</div>
-          <div id="complaintsList" class="complaints-list mobile-list"></div>
-        </article>
-
-        <article id="adminWorkspace" class="screen-card admin-screen">
-          <div class="screen-titlebar">Admin Dashboard</div>
-          <div id="adminActionCenter" class="admin-action-center"></div>
-          <div class="metric-ribbon">
-            <div class="stat-chip blue"><span>Total</span><strong id="totalComplaints">0</strong></div>
-            <div class="stat-chip amber"><span>Pending</span><strong id="openComplaints">0</strong></div>
-            <div class="stat-chip green"><span>Resolved</span><strong id="resolvedCount">0</strong></div>
+            <article id="complaintsWorkspace" class="device-panel device-right screen-card">
+              <div class="screen-titlebar">My Complaints</div>
+              <div id="complaintsList" class="complaints-list mobile-list"></div>
+            </article>
           </div>
-          <div id="adminTable" class="table-list"></div>
-        </article>
+        </section>
 
-        <article id="alertsWorkspace" class="screen-card alerts-screen">
-          <div class="screen-titlebar">Alert Center</div>
-          <div id="alertsList" class="table-list"></div>
-        </article>
+        <p id="dashboardMessage" class="dashboard-banner" data-reveal>
+          New complaints are added live to the complaint queue after AI analysis.
+        </p>
 
-        <article id="sensorsWorkspace" class="screen-card sensors-screen">
-          <div class="screen-titlebar">IoT Sensors</div>
-          <div id="sensorList" class="table-list"></div>
-        </article>
-
-        <article id="mapWorkspace" class="screen-card map-screen">
-          <div class="screen-titlebar">Complaints Map</div>
-          <div class="live-map-panel">
-            <div class="live-map-head">
-              <strong>Live Location Preview</strong>
-              <p id="liveLocationStatus" class="helper-text">Type a location in Report an Issue to preview it here.</p>
+        <section class="ops-grid" data-reveal>
+          <article id="adminWorkspace" class="soft-surface screen-card">
+            <div class="screen-titlebar">Admin Dashboard</div>
+            <div id="adminActionCenter" class="admin-action-center"></div>
+            <div class="metric-ribbon">
+              <div class="stat-chip blue"><span>Total</span><strong id="totalComplaints">0</strong></div>
+              <div class="stat-chip coral"><span>Pending</span><strong id="openComplaints">0</strong></div>
+              <div class="stat-chip sage"><span>Resolved</span><strong id="resolvedCount">0</strong></div>
             </div>
-            <iframe
-              id="locationMapFrame"
-              class="location-map-frame"
-              title="Typed location preview"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              hidden
-            ></iframe>
-          </div>
-          <div id="mapLegend" class="map-legend"></div>
-          <div id="complaintsMap" class="map-canvas"></div>
-        </article>
+            <div id="adminTable" class="table-list"></div>
+          </article>
 
-        <article id="userManagementWorkspace" class="screen-card user-admin-screen">
-          <div class="screen-titlebar">Account Management</div>
-          <p class="helper-text">Admins can remove Citizen or Admin accounts from here.</p>
-          <div id="userManagementList" class="table-list"></div>
-        </article>
-      </section>
+          <div class="ops-stack">
+            <article id="alertsWorkspace" class="soft-surface screen-card">
+              <div class="screen-titlebar">Alert Center</div>
+              <div id="alertsList" class="table-list"></div>
+            </article>
+
+            <article id="sensorsWorkspace" class="soft-surface screen-card">
+              <div class="screen-titlebar">IoT Sensors</div>
+              <div id="sensorList" class="table-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="map-management-grid" data-reveal>
+          <article id="mapWorkspace" class="soft-surface screen-card map-shell">
+            <div class="screen-titlebar">Complaints Map</div>
+            <div class="live-map-panel">
+              <div class="live-map-head">
+                <strong>Live location preview</strong>
+                <p id="liveLocationStatus" class="helper-text">Type a location in Report an Issue to preview it here.</p>
+              </div>
+              <iframe
+                id="locationMapFrame"
+                class="location-map-frame"
+                title="Typed location preview"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                hidden
+              ></iframe>
+            </div>
+            <div id="mapLegend" class="map-legend"></div>
+            <div id="complaintsMap" class="map-canvas"></div>
+          </article>
+
+          <article id="userManagementWorkspace" class="soft-surface screen-card">
+            <div class="screen-titlebar">Account Management</div>
+            <p class="helper-text">Admins can remove Citizen or Admin accounts from here.</p>
+            <div id="userManagementList" class="table-list"></div>
+          </article>
+        </section>
+
+        <section class="diary-section" data-reveal>
+          <div class="section-intro">
+            <p class="eyebrow dark">Diary notes</p>
+            <h2>What this platform is built to make easier.</h2>
+          </div>
+          <div class="diary-grid">
+            <article class="diary-card tilt-left">
+              <p>“A citizen should be able to report a problem, attach evidence, and generate a formal authority-ready document without switching platforms.”</p>
+              <div class="diary-signature"><span></span><em>Formal escalation</em></div>
+            </article>
+            <article class="diary-card tilt-right">
+              <p>“The dashboard should feel calm enough for daily use while still surfacing severity, departments, alerts, and complaints clearly for administrators.”</p>
+              <div class="diary-signature"><span></span><em>Operational clarity</em></div>
+            </article>
+          </div>
+        </section>
+
+      </main>
 
       <footer class="page-footer" data-reveal>
         <p class="footer-title">AI Powered Smart Community Problem Detection System</p>
@@ -312,6 +406,9 @@
             </p>
             <p class="footer-links">
               <strong><a href="https://nammabengaluru.org.in/home/department/list?displayName=BBMP" target="_blank" rel="noreferrer noopener">BBMP Complaint Portal</a></strong>
+            </p>
+            <p class="footer-links">
+              <strong><a href="#faq" id="openFaqLink">FAQ</a></strong>
             </p>
           </section>
           <section class="footer-credits">

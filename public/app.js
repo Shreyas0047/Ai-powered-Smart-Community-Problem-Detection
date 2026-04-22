@@ -19,6 +19,7 @@ const imageHintText = document.getElementById("imageHintText");
 const showAiAccuracyBtn = document.getElementById("showAiAccuracyBtn");
 const aiAccuracyStatus = document.getElementById("aiAccuracyStatus");
 const previewLocationBtn = document.getElementById("previewLocationBtn");
+const useLiveLocationBtn = document.getElementById("useLiveLocationBtn");
 const resetDashboardBtn = document.getElementById("resetDashboardBtn");
 const generatePdfBtn = document.getElementById("generatePdfBtn");
 const emailBbmpBtn = document.getElementById("emailBbmpBtn");
@@ -36,7 +37,9 @@ const authTokenState = document.getElementById("authTokenState");
 const activeUsername = document.getElementById("activeUsername");
 const complaintSubmitBtn = document.getElementById("complaintSubmitBtn");
 const authOverlay = document.getElementById("authOverlay");
+const faqOverlay = document.getElementById("faqOverlay");
 const closeAuthBtn = document.getElementById("closeAuthBtn");
+const closeFaqBtn = document.getElementById("closeFaqBtn");
 const authForm = document.getElementById("authForm");
 const authSubmitBtn = document.getElementById("authSubmitBtn");
 const authMessage = document.getElementById("authMessage");
@@ -44,6 +47,7 @@ const mobileMenuToggle = document.getElementById("mobileMenuToggle");
 const siteNav = document.getElementById("siteNav");
 const showLoginBtn = document.getElementById("showLoginBtn");
 const showRegisterBtn = document.getElementById("showRegisterBtn");
+const openFaqLink = document.getElementById("openFaqLink");
 const userManagementList = document.getElementById("userManagementList");
 const mainDashboard = document.getElementById("mainDashboard");
 const reportWorkspace = document.getElementById("reportWorkspace");
@@ -422,7 +426,25 @@ function closeAuthOverlay() {
     return;
   }
   authOverlay.hidden = true;
-  document.body.classList.remove("auth-open");
+  if (faqOverlay?.hidden !== false) {
+    document.body.classList.remove("auth-open");
+  }
+}
+
+function openFaqOverlay() {
+  faqOverlay.hidden = false;
+  document.body.classList.add("auth-open");
+  if (siteNav?.classList.contains("is-open")) {
+    siteNav.classList.remove("is-open");
+    mobileMenuToggle?.setAttribute("aria-expanded", "false");
+  }
+}
+
+function closeFaqOverlay() {
+  faqOverlay.hidden = true;
+  if (authOverlay?.hidden !== false) {
+    document.body.classList.remove("auth-open");
+  }
 }
 
 function goToMainDashboard() {
@@ -662,10 +684,11 @@ function finishEmailProgress(success = true) {
   }, success ? 2200 : 2600);
 }
 
-function updateLiveLocationMap(location) {
+function updateLiveLocationMap(location, mapQuery = location) {
   const trimmedLocation = (location || "").trim();
+  const trimmedMapQuery = (mapQuery || "").trim();
 
-  if (!trimmedLocation) {
+  if (!trimmedLocation || !trimmedMapQuery) {
     locationMapFrame.hidden = true;
     locationMapFrame.removeAttribute("src");
     liveLocationStatus.textContent = "Type a location in Report an Issue to preview it here.";
@@ -673,8 +696,62 @@ function updateLiveLocationMap(location) {
   }
 
   locationMapFrame.hidden = false;
-  locationMapFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(trimmedLocation)}&output=embed`;
+  locationMapFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(trimmedMapQuery)}&output=embed`;
   liveLocationStatus.textContent = `Showing map preview for ${trimmedLocation}.`;
+}
+
+function formatReverseGeocodedLocation(data, latitude, longitude) {
+  const address = data?.address || {};
+  const orderedParts = [
+    address.road,
+    address.neighbourhood,
+    address.suburb,
+    address.city_district,
+    address.village,
+    address.town,
+    address.city,
+    address.county,
+    address.state
+  ].filter(Boolean);
+
+  const uniqueParts = [...new Set(orderedParts)];
+  if (uniqueParts.length) {
+    return uniqueParts.slice(0, 4).join(", ");
+  }
+
+  if (typeof data?.display_name === "string" && data.display_name.trim()) {
+    return data.display_name
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+      .join(", ");
+  }
+
+  return `Current location near ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+}
+
+async function reverseGeocodeLiveLocation(latitude, longitude) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to translate live location into a readable place.");
+  }
+
+  const data = await response.json();
+  return formatReverseGeocodedLocation(data, latitude, longitude);
+}
+
+function updateLiveLocationMapFromCoordinates(latitude, longitude) {
+  const formatted = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+  locationMapFrame.hidden = false;
+  locationMapFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(formatted)}&output=embed`;
+  liveLocationStatus.textContent = `Showing live location preview for ${formatted}.`;
 }
 
 function showTypedLocationOnMap() {
@@ -686,6 +763,53 @@ function showTypedLocationOnMap() {
   }
 
   mapWorkspace.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function useLiveLocation() {
+  if (!navigator.geolocation) {
+    setDashboardMessage("Live location is not supported in this browser.", "error");
+    return;
+  }
+
+  useLiveLocationBtn.disabled = true;
+  setDashboardMessage("Fetching live location...", "info");
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      let readableLocation = "";
+
+      try {
+        readableLocation = await reverseGeocodeLiveLocation(latitude, longitude);
+      } catch (error) {
+        readableLocation = "Current location";
+      }
+
+      reportLocationInput.value = readableLocation;
+      updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+      setDashboardMessage("Live location added to the report form.", "success");
+      useLiveLocationBtn.disabled = false;
+    },
+    (error) => {
+      const message =
+        error.code === error.PERMISSION_DENIED
+          ? "Location permission was denied. Allow location access and try again."
+          : error.code === error.POSITION_UNAVAILABLE
+            ? "Live location is unavailable right now."
+            : error.code === error.TIMEOUT
+              ? "Live location request timed out. Try again."
+              : "Unable to fetch live location.";
+
+      setDashboardMessage(message, "error");
+      useLiveLocationBtn.disabled = false;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000
+    }
+  );
 }
 
 function describeImageFromFeatures(features) {
@@ -1561,8 +1685,10 @@ function setComplaintInputMode(mode) {
   const isVoiceMode = mode === "voice";
 
   typedComplaintField.hidden = isVoiceMode;
+  typedComplaintField.style.display = isVoiceMode ? "none" : "";
   typedComplaintInput.disabled = isVoiceMode;
   voiceComplaintField.hidden = !isVoiceMode;
+  voiceComplaintField.style.display = isVoiceMode ? "" : "none";
   voiceTranscriptInput.disabled = !isVoiceMode;
 
   if (isVoiceMode) {
@@ -1823,6 +1949,11 @@ showLoginBtn.addEventListener("click", () => openAuthOverlay("login"));
 showRegisterBtn.addEventListener("click", () => openAuthOverlay("register"));
 issueTokenBtn.addEventListener("click", () => openAuthOverlay("login"));
 closeAuthBtn.addEventListener("click", closeAuthOverlay);
+openFaqLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+  openFaqOverlay();
+});
+closeFaqBtn?.addEventListener("click", closeFaqOverlay);
 generatePdfBtn.addEventListener("click", async () => {
   try {
     const result = await generatePdfReport(lastSubmittedReport, { download: true });
@@ -1881,6 +2012,7 @@ reportLocationInput.addEventListener("input", (event) => {
   updateLiveLocationMap(event.target.value);
 });
 previewLocationBtn.addEventListener("click", showTypedLocationOnMap);
+useLiveLocationBtn?.addEventListener("click", useLiveLocation);
 
 document.addEventListener(
   "pointerdown",
