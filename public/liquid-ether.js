@@ -96,9 +96,9 @@ const fragmentShader = `
     vec3 color = palette(flow);
 
     float glow = smoothstep(0.95, 0.15, length(centered * vec2(0.88, 1.1)));
-    float alpha = (0.18 + glow * 0.22 + pointerField * 0.18) * uStrength;
+    float alpha = (0.3 + glow * 0.34 + pointerField * 0.24) * uStrength;
 
-    gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.42));
+    gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.72));
   }
 `;
 
@@ -148,7 +148,7 @@ class LiquidEtherBackground {
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     const colors = parseColors(host.dataset.colors);
-    const strength = Number.parseFloat(host.dataset.strength || "0.35");
+    const strength = Number.parseFloat(host.dataset.strength || "0.55");
 
     this.material = new THREE.ShaderMaterial({
       transparent: true,
