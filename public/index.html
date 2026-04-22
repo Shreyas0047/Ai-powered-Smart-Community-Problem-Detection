@@ -11,6 +11,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
@@ -172,7 +174,7 @@
             </p>
             <div class="hero-cta-row">
               <a href="#reportFormWorkspace" class="hero-link primary-link">Report an issue</a>
-              <a href="#mapWorkspace" class="hero-link ghost-link">See the complaint map</a>
+              <a href="#mapWorkspace" class="hero-link ghost-link">Preview live location</a>
             </div>
           </div>
           <div class="hero-status-cluster">
@@ -187,28 +189,45 @@
           </div>
         </section>
 
-        <section class="scenario-section" data-reveal>
+        <section class="ticker-section" data-reveal>
           <div class="section-intro">
-            <p class="eyebrow dark">Daily moments</p>
-            <h2>The kinds of issues communities actually need to act on.</h2>
+            <p class="eyebrow dark">Continuous civic flow</p>
+            <h2>A long, uninterrupted sentence about what communities move through together.</h2>
           </div>
-          <div class="scenario-scroll" aria-label="Complaint scenarios">
-            <article class="scenario-card">
-              <span>07:10 am</span>
-              <strong>Water stagnation building up near the main entrance</strong>
-            </article>
-            <article class="scenario-card">
-              <span>09:45 am</span>
-              <strong>Fallen tree blocking the road after overnight rain</strong>
-            </article>
-            <article class="scenario-card">
-              <span>12:30 pm</span>
-              <strong>Smoke, short-circuit concern, and urgent escalation</strong>
-            </article>
-            <article class="scenario-card">
-              <span>06:05 pm</span>
-              <strong>Streetlight outage and public safety visibility issue</strong>
-            </article>
+          <div class="ticker-stage" id="tickerStage">
+            <div class="ticker-track" id="tickerTrack" aria-label="Horizontal civic ticker">
+              <span class="ticker-word">In</span>
+              <span class="ticker-word">every</span>
+              <span class="ticker-word">bottle,</span>
+              <span class="ticker-separator ticker-separator-wave" aria-hidden="true">
+                <svg viewBox="0 0 140 44" fill="none">
+                  <path d="M4 24C24 6 44 6 64 24C84 42 104 42 136 14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span class="ticker-word">discover</span>
+              <span class="ticker-word">the</span>
+              <span class="ticker-word">undeniable</span>
+              <span class="ticker-emphasis">Real Magic</span>
+              <span class="ticker-word">of</span>
+              <span class="ticker-word">sharing</span>
+              <span class="ticker-separator ticker-separator-spark" aria-hidden="true">
+                <svg viewBox="0 0 40 40" fill="none">
+                  <path d="M20 3L22.8 17.2L37 20L22.8 22.8L20 37L17.2 22.8L3 20L17.2 17.2L20 3Z" fill="currentColor"/>
+                </svg>
+              </span>
+              <span class="ticker-word">pure</span>
+              <span class="ticker-word">Refreshment</span>
+              <span class="ticker-word">that</span>
+              <span class="ticker-word">brings</span>
+              <span class="ticker-word">us</span>
+              <span class="ticker-emphasis">Together</span>
+              <span class="ticker-separator ticker-separator-loop" aria-hidden="true">
+                <svg viewBox="0 0 92 48" fill="none">
+                  <path d="M18 24C18 14.0589 26.0589 6 36 6H56C65.9411 6 74 14.0589 74 24C74 33.9411 65.9411 42 56 42H36C26.0589 42 18 33.9411 18 24Z" stroke="currentColor" stroke-width="4"/>
+                  <path d="M6 24H18M74 24H86" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </div>
           </div>
         </section>
 
@@ -386,7 +405,7 @@
 
         <section class="map-management-grid" data-reveal>
           <article id="mapWorkspace" class="soft-surface screen-card map-shell">
-            <div class="screen-titlebar">Complaints Map</div>
+            <div class="screen-titlebar">Live Location Preview</div>
             <div class="live-map-panel">
               <div class="live-map-head">
                 <strong>Live location preview</strong>
@@ -401,8 +420,9 @@
                 hidden
               ></iframe>
             </div>
-            <div id="mapLegend" class="map-legend"></div>
-            <div id="complaintsMap" class="map-canvas"></div>
+            <p class="helper-text map-note">
+              This section now focuses only on the typed or detected live location preview from the report form.
+            </p>
           </article>
 
           <article id="userManagementWorkspace" class="soft-surface screen-card">

@@ -586,7 +586,7 @@ button:disabled {
   font-size: clamp(2.4rem, 7vw, 4.2rem);
 }
 
-.scenario-section,
+.ticker-section,
 .diary-section,
 .faq-section,
 .conversion-section {
@@ -594,47 +594,69 @@ button:disabled {
   gap: 14px;
 }
 
-.scenario-scroll {
+.ticker-stage {
+  position: relative;
+  min-height: 44vh;
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 288px;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scrollbar-width: none;
+  align-items: center;
+  overflow: hidden;
+  padding: 14px 0;
 }
 
-.scenario-scroll::-webkit-scrollbar {
-  display: none;
+.ticker-track {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(1.25rem, 4vw, 4.75rem);
+  width: max-content;
+  min-width: 100%;
+  padding: 0 4vw;
+  will-change: transform;
 }
 
-.scenario-card {
-  height: 160px;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: var(--white-88);
-  border: 1px solid rgba(255, 255, 255, 0.92);
-  border-radius: 24px;
-  box-shadow: var(--shadow-soft);
-  transition: transform 180ms ease, color 180ms ease;
+.ticker-word,
+.ticker-emphasis {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: var(--stone-900);
 }
 
-.scenario-card:hover {
-  transform: translateY(-2px);
+.ticker-word {
+  font-size: clamp(2.8rem, 8vw, 6.6rem);
+  font-weight: 600;
+}
+
+.ticker-emphasis {
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-family: "Reenie Beanie", cursive;
+  font-weight: 400;
   color: #b07671;
 }
 
-.scenario-card span {
-  font-size: 0.875rem;
-  color: var(--stone-600);
+.ticker-separator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: rgba(176, 118, 113, 0.82);
 }
 
-.scenario-card strong {
-  font-size: 1.25rem;
-  line-height: 1.35;
-  font-weight: 500;
+.ticker-separator-wave {
+  width: clamp(88px, 11vw, 160px);
+}
+
+.ticker-separator-spark {
+  width: clamp(28px, 4vw, 46px);
+}
+
+.ticker-separator-loop {
+  width: clamp(64px, 8vw, 110px);
+}
+
+.ticker-separator svg {
+  width: 100%;
+  height: auto;
 }
 
 .session-ribbon,
@@ -1095,7 +1117,7 @@ select:focus {
 }
 
 .map-shell {
-  min-height: 100%;
+  min-height: auto;
 }
 
 .live-map-panel {
@@ -1116,93 +1138,8 @@ select:focus {
   background: #f7f4ef;
 }
 
-.map-canvas {
-  position: relative;
-  min-height: 340px;
-  overflow: hidden;
-  border-radius: 2rem;
-  border: 1px solid rgba(231, 229, 228, 0.95);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 246, 241, 0.96));
-}
-
-.map-grid {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(120, 113, 108, 0.05) 0 10%, transparent 10% 12%, rgba(120, 113, 108, 0.05) 12% 22%, transparent 22% 24%, rgba(120, 113, 108, 0.05) 24% 36%, transparent 36% 38%, rgba(120, 113, 108, 0.05) 38% 48%, transparent 48% 50%, rgba(120, 113, 108, 0.05) 50% 63%, transparent 63% 65%, rgba(120, 113, 108, 0.05) 65% 76%, transparent 76% 78%, rgba(120, 113, 108, 0.05) 78% 100%),
-    linear-gradient(rgba(120, 113, 108, 0.05) 0 8%, transparent 8% 10%, rgba(120, 113, 108, 0.05) 10% 22%, transparent 22% 24%, rgba(120, 113, 108, 0.05) 24% 35%, transparent 35% 37%, rgba(120, 113, 108, 0.05) 37% 48%, transparent 48% 50%, rgba(120, 113, 108, 0.05) 50% 64%, transparent 64% 66%, rgba(120, 113, 108, 0.05) 66% 78%, transparent 78% 80%, rgba(120, 113, 108, 0.05) 80% 100%);
-}
-
-.road {
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(255, 183, 178, 0.85);
-}
-
-.road-a {
-  width: 150%;
-  height: 8px;
-  top: 28%;
-  left: -20%;
-  transform: rotate(-16deg);
-}
-
-.road-b {
-  width: 130%;
-  height: 7px;
-  top: 64%;
-  left: -8%;
-  transform: rotate(32deg);
-}
-
-.road-c {
-  width: 100%;
-  height: 7px;
-  top: 49%;
-  left: 0;
-  transform: rotate(-45deg);
-}
-
-.map-pin {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50% 50% 50% 0;
-  background: var(--pin);
-  transform: rotate(-45deg);
-  box-shadow: var(--shadow-soft);
-  animation: floatPin 6s ease-in-out infinite;
-}
-
-.map-pin::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  border-radius: 50%;
-}
-
-.legend-dot.red {
-  background: #f97316;
-}
-
-.legend-dot.yellow {
-  background: #facc15;
-}
-
-.legend-dot.green {
-  background: #86efac;
+.map-note {
+  margin: 0;
 }
 
 .diary-grid {
