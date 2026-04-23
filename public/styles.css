@@ -18,6 +18,24 @@
   --radius-lg: 3rem;
   --radius-md: 2rem;
   --radius-sm: 1.5rem;
+  --beam-violet: #6f4cff;
+  --beam-cyan: #55d5ff;
+  --beam-coral: #ffb7b2;
+}
+
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes beam-spin {
+  from {
+    --beam-angle: 0deg;
+  }
+  to {
+    --beam-angle: 360deg;
+  }
 }
 
 * {
@@ -232,6 +250,60 @@ button:hover,
   transform: translateY(-1px);
 }
 
+.light-beam-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #0a0a0f;
+  color: #fff;
+  box-shadow:
+    0 0 20px -8px rgba(111, 76, 255, 0.42),
+    0 0 36px -18px rgba(85, 213, 255, 0.34);
+}
+
+.light-beam-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0%,
+    var(--beam-violet) 34%,
+    var(--beam-cyan) 50%,
+    var(--beam-coral) 64%,
+    transparent 78%,
+    transparent 100%
+  );
+  animation: beam-spin 2.4s linear infinite;
+  z-index: -2;
+}
+
+.light-beam-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(111, 76, 255, 0.18), transparent 58%),
+    linear-gradient(180deg, rgba(16, 16, 22, 0.96), rgba(7, 7, 11, 0.98));
+  z-index: -1;
+}
+
+.light-beam-button:hover {
+  box-shadow:
+    0 0 24px -8px rgba(111, 76, 255, 0.5),
+    0 0 44px -18px rgba(85, 213, 255, 0.42);
+}
+
+.light-beam-button:hover::after {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(111, 76, 255, 0.24), transparent 60%),
+    linear-gradient(180deg, rgba(20, 20, 28, 0.98), rgba(8, 8, 13, 0.98));
+}
+
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -433,6 +505,12 @@ button:disabled {
   background: rgba(255, 255, 255, 0.92);
   color: var(--stone-900);
   border: 1px solid rgba(231, 229, 228, 0.9);
+}
+
+button.light-beam-button,
+.hero-link.light-beam-button {
+  background: #0a0a0f;
+  color: #fff;
 }
 
 .hero-status-cluster {
