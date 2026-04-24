@@ -1586,6 +1586,17 @@ function toReadableTranscriptionError(error) {
   return message;
 }
 
+function combineTranscriptionErrors(primaryError, fallbackError) {
+  const primary = toReadableTranscriptionError(primaryError);
+  const fallback = toReadableTranscriptionError(fallbackError);
+
+  if (primary && fallback && primary !== fallback) {
+    return `${primary} Browser fallback also failed: ${fallback}`;
+  }
+
+  return primary || fallback || "Audio transcription failed. Type the complaint summary manually.";
+}
+
 function getSupportedRecordingMimeType() {
   if (!window.MediaRecorder) {
     return "";
@@ -1704,10 +1715,9 @@ async function transcribeVoiceAudio(sourceFile) {
       voiceTranscriptStatus.textContent =
         "Recording transcribed in the browser fallback. Review the text before submitting.";
     } catch (browserError) {
-      voiceTranscriptStatus.textContent =
-        toReadableTranscriptionError(browserError) ||
-        toReadableTranscriptionError(serviceError) ||
-        "Audio transcription failed. Type the complaint summary manually.";
+      const finalError = combineTranscriptionErrors(serviceError, browserError);
+      voiceTranscriptStatus.textContent = finalError;
+      setDashboardMessage(finalError, "error");
     }
   }
 }
