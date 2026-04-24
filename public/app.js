@@ -1572,6 +1572,20 @@ function extractBase64Payload(dataUrl) {
   return commaIndex >= 0 ? value.slice(commaIndex + 1) : value;
 }
 
+function toReadableTranscriptionError(error) {
+  const message = String(error?.message || "").trim();
+
+  if (!message) {
+    return "Audio transcription failed. Type the complaint summary manually.";
+  }
+
+  if (/failed to fetch/i.test(message)) {
+    return "Transcription could not reach the service. Check internet access and your Deepgram configuration.";
+  }
+
+  return message;
+}
+
 function getSupportedRecordingMimeType() {
   if (!window.MediaRecorder) {
     return "";
@@ -1672,7 +1686,7 @@ async function transcribeVoiceAudio(sourceFile) {
   } catch (serviceError) {
     if (!window.browserAudioTranscriber?.transcribeAudioFile) {
       voiceTranscriptStatus.textContent =
-        serviceError?.message || "Audio transcription failed. Type the complaint summary manually.";
+        toReadableTranscriptionError(serviceError);
       return;
     }
 
@@ -1691,8 +1705,8 @@ async function transcribeVoiceAudio(sourceFile) {
         "Recording transcribed in the browser fallback. Review the text before submitting.";
     } catch (browserError) {
       voiceTranscriptStatus.textContent =
-        browserError?.message ||
-        serviceError?.message ||
+        toReadableTranscriptionError(browserError) ||
+        toReadableTranscriptionError(serviceError) ||
         "Audio transcription failed. Type the complaint summary manually.";
     }
   }

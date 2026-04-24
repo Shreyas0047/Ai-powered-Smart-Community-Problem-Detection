@@ -12,11 +12,16 @@ const ISSUE_PROFILES = [
       ["gas leak", 1.05],
       ["leak", 0.5],
       ["smoke", 0.9],
+      ["smoke smell", 0.86],
       ["fire", 1.0],
       ["flame", 0.9],
       ["burn", 0.62],
+      ["burning", 0.68],
       ["spark", 0.58],
+      ["sparking", 0.66],
       ["short circuit", 0.98],
+      ["burning wire", 0.96],
+      ["transformer blast", 1.0],
       ["explosion", 1.0],
       ["emergency", 0.8]
     ],
@@ -60,6 +65,9 @@ const ISSUE_PROFILES = [
       ["crack", 0.72],
       ["damaged road", 0.9],
       ["sinkhole", 0.98],
+      ["cave in", 0.92],
+      ["cave-in", 0.92],
+      ["crater", 0.72],
       ["surface damage", 0.65],
       ["pavement", 0.38],
       ["manhole", 0.45]
@@ -250,6 +258,9 @@ const ISSUE_PROFILES = [
       ["stagnant", 0.68],
       ["stagnant water", 0.82],
       ["water stagnation", 0.84],
+      ["heavy waterlogging", 0.96],
+      ["blocked drainage", 0.9],
+      ["rain water accumulation", 0.84],
       ["leakage", 0.44]
     ],
     locationTerms: [
@@ -288,8 +299,10 @@ const ISSUE_PROFILES = [
       ["ceiling crack", 0.94],
       ["building crack", 1.0],
       ["plaster", 0.58],
+      ["plaster fallen", 0.82],
       ["structural", 0.88],
       ["collapse", 0.92],
+      ["collapsed wall", 0.96],
       ["damaged wall", 0.86],
       ["seepage", 0.72],
       ["leak stain", 0.58]
@@ -330,7 +343,10 @@ const ISSUE_PROFILES = [
     textTerms: [
       ["theft", 0.96],
       ["suspicious", 0.92],
+      ["suspicious person", 0.98],
+      ["suspicious activity", 0.96],
       ["fight", 0.72],
+      ["robbery", 0.94],
       ["intruder", 0.98],
       ["security", 0.72],
       ["unsafe", 0.4],
@@ -361,16 +377,23 @@ const ISSUE_PROFILES = [
       ["streetlight", 1.0],
       ["street light", 1.0],
       ["street light off", 1.05],
+      ["streetlight not working", 1.05],
+      ["streetlight off", 1.05],
       ["electric", 0.72],
       ["wire", 0.46],
       ["live wire", 0.96],
       ["fallen wire", 0.96],
       ["hanging wire", 0.88],
+      ["snapped wire", 0.96],
       ["cable", 0.5],
       ["lamp post", 0.78],
       ["pole", 0.36],
+      ["electric pole", 0.82],
+      ["fallen pole", 0.92],
       ["transformer", 0.72],
       ["power outage", 0.82],
+      ["no power", 0.78],
+      ["no light", 0.8],
       ["meter box", 0.7],
       ["power", 0.44],
       ["flicker", 0.38]
@@ -406,6 +429,8 @@ const ISSUE_PROFILES = [
       ["leaking pipe", 0.96],
       ["water leakage", 1.02],
       ["tap leak", 0.84],
+      ["pipe break", 0.92],
+      ["tap broken", 0.78],
       ["overflowing tank", 0.92],
       ["water line", 0.66],
       ["pipeline", 0.58],
@@ -455,6 +480,7 @@ const ISSUE_PROFILES = [
       ["bull", 0.84],
       ["monkey", 0.78],
       ["pig", 0.7],
+      ["snake", 0.92],
       ["animal on road", 1.02],
       ["animal menace", 0.92],
       ["dead animal", 1.0]
@@ -495,7 +521,10 @@ const ISSUE_PROFILES = [
       ["bike blocking", 0.92],
       ["double parked", 0.96],
       ["vehicle obstruction", 1.0],
-      ["blocked entrance", 0.92]
+      ["blocked entrance", 0.92],
+      ["blocking gate", 1.0],
+      ["gate blocked", 0.96],
+      ["driveway blocked", 1.0]
     ],
     locationTerms: [
       ["gate", 0.3],
@@ -776,6 +805,12 @@ function fuseIssueDecision(nlpBundle, cvBundle, payload) {
     if (profile.id === "water_leakage" && hasAnyTerm(unifiedText, ["leak", "pipe", "burst", "seepage"])) {
       fusedScore += 0.24;
     }
+    if (profile.id === "utility_fault" && hasAnyTerm(unifiedText, ["streetlight", "street light", "wire", "pole", "transformer", "power outage", "no light"])) {
+      fusedScore += 0.2;
+    }
+    if (profile.id === "security" && hasAnyTerm(unifiedText, ["intruder", "theft", "robbery", "suspicious", "trespass"])) {
+      fusedScore += 0.18;
+    }
     if (profile.id === "animal_intrusion" && hasAnyTerm(unifiedText, ["dog", "animal", "cow", "cattle", "monkey"])) {
       fusedScore += 0.08;
     }
@@ -790,6 +825,9 @@ function fuseIssueDecision(nlpBundle, cvBundle, payload) {
     }
     if (profile.id === "water_drainage" && hasAnyTerm(unifiedText, ["pipe", "burst", "seepage", "tank", "leakage"])) {
       fusedScore -= 0.22;
+    }
+    if (profile.id === "safety_fire" && hasAnyTerm(unifiedText, ["streetlight off", "no light", "power outage"]) && !hasAnyTerm(unifiedText, ["fire", "smoke", "gas", "burning"])) {
+      fusedScore -= 0.16;
     }
     if (profile.id === "utility_fault" && imageFeatures.greenRatio > 0.26 && !hasAnyTerm(unifiedText, ["wire", "pole", "streetlight", "electric"])) {
       fusedScore -= 0.08;
@@ -935,7 +973,7 @@ function analyzeComplaintLocally(payload) {
   const mapLocation = buildMapLocation(payload.location);
   const mergedText = [payload.textComplaint, payload.voiceTranscript, payload.imageHint].filter(Boolean).join(" ").trim();
   const confidence = clamp01(
-    Math.max(nlpBundle.result.confidence || 0, cvBundle.result.score || 0) * 0.72 +
+    Math.max(nlpBundle.result.confidence || 0, cvBundle.result.score || 0, fusedIssue.fusedScore || 0) * 0.74 +
       (nlpBundle.profile.id === cvBundle.profile.id ? 0.18 : 0.08)
   );
 
@@ -1012,19 +1050,46 @@ async function transcribeAudio(payload) {
       punctuate: "true"
     });
 
-    const response = await fetch(`https://api.deepgram.com/v1/listen?${query.toString()}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Token ${env.deepgramApiKey}`,
-        "Content-Type": mimeType
-      },
-      body: audioBuffer,
-      signal: controller.signal
-    });
+    let response;
 
-    const data = await response.json();
+    try {
+      response = await fetch(`https://api.deepgram.com/v1/listen?${query.toString()}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${env.deepgramApiKey}`,
+          "Content-Type": mimeType
+        },
+        body: audioBuffer,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error("Deepgram transcription timed out. Try a shorter recording or try again.");
+      }
+
+      throw new Error(
+        "Unable to reach Deepgram from the server. Check internet access, Render outbound networking, and DEEPGRAM_API_KEY."
+      );
+    }
+
+    let data = null;
+    const rawBody = await response.text();
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch (_error) {
+      data = {};
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Deepgram rejected the request. Verify DEEPGRAM_API_KEY.");
+    }
+
+    if (response.status === 413) {
+      throw new Error("The recording is too large for transcription. Try a shorter recording.");
+    }
+
     if (!response.ok) {
-      throw new Error(data.err_msg || data.error || "Deepgram transcription failed.");
+      throw new Error(data.err_msg || data.error || `Deepgram transcription failed with status ${response.status}.`);
     }
 
     const transcript =
