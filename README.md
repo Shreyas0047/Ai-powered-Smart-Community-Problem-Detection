@@ -3,11 +3,11 @@
 This project now follows the architecture you described:
 
 - `Flask` AI microservice for text and image analysis
-- `Optional Flask` speech-to-text microservice for dedicated audio transcription
 - `Node.js + Express` API for authentication, complaints, dashboard access, payments, and complaint status workflows
 - `MongoDB Atlas` for complaint, payment, pending order, and user storage
 - `Razorpay` for secure online maintenance payments with automatic receipt creation
 - `SMTP email sending` for automatic BBMP complaint forwarding with PDF attachment
+- `Deepgram Speech-to-Text API` for live voice complaint transcription
 
 ## Architecture
 
@@ -17,8 +17,6 @@ This project now follows the architecture you described:
   Express backend with routes, controllers, models, middleware, and services
 - `ai_service/`
   Flask microservice that analyzes complaint text, image-derived features, and uploaded audio transcription
-- `stt_service/`
-  Dedicated Flask speech-to-text microservice for Whisper-based audio transcription
 - `receipts/`
   Auto-generated maintenance payment receipts after successful Razorpay verification
 
@@ -40,8 +38,8 @@ PORT=3000
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/smart-community?retryWrites=true&w=majority
 JWT_SECRET=replace-with-a-strong-secret
 AI_SERVICE_URL=http://127.0.0.1:5000
-STT_SERVICE_URL=http://127.0.0.1:5001
-STT_SERVICE_TOKEN=replace-with-a-shared-secret
+DEEPGRAM_API_KEY=your_deepgram_api_key
+DEEPGRAM_MODEL=nova-3
 RAZORPAY_KEY_ID=rzp_test_xxxxx
 RAZORPAY_KEY_SECRET=xxxxxxxx
 SMTP_HOST=smtp.gmail.com
@@ -68,11 +66,8 @@ pip install -r ai_service/requirements.txt
 ```
 
 Note:
-- The app can transcribe audio in 3 ways:
-  - preferred: dedicated `stt_service`
-  - fallback: `/transcribe` on `ai_service`
-  - final fallback: browser-side transcription
-- The first server-side transcription request may take longer because the Whisper model may need to initialize.
+- Voice complaint recording is sent from the browser to the Node backend and then forwarded to Deepgram for transcription.
+- If Deepgram is unavailable, the app falls back to browser-side transcription when available.
 
 Seed MongoDB Atlas with demo complaints and users:
 
@@ -94,12 +89,6 @@ Start the Flask AI microservice:
 npm run start:ai
 ```
 
-Optional: start the dedicated speech-to-text microservice:
-
-```bash
-npm run start:stt
-```
-
 Start the Express API:
 
 ```bash
@@ -118,8 +107,8 @@ The simplest production setup for this project is:
 
 - `MongoDB Atlas` for the database
 - `Render web service` for the Node.js web app
-- `Render web service` for the Flask AI microservice
-- `Optional Render web service` for the dedicated speech-to-text microservice
+- `Optional Render web service` for the Flask AI microservice
+- `Deepgram API` for speech-to-text
 
 Users should open the deployed `Node.js` service URL. The frontend is served by Express, so the app will be accessible from phones, tablets, and laptops through that single public URL.
 
@@ -152,8 +141,8 @@ Set these environment variables on the `Node` service:
 MONGODB_URI=your_atlas_uri
 JWT_SECRET=your_strong_secret
 AI_SERVICE_URL=https://your-flask-service.onrender.com
-STT_SERVICE_URL=https://your-stt-service.onrender.com
-STT_SERVICE_TOKEN=replace-with-a-shared-secret
+DEEPGRAM_API_KEY=your_deepgram_api_key
+DEEPGRAM_MODEL=nova-3
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -170,25 +159,8 @@ Notes:
 - Do not set `PORT` manually on Render. Render provides it automatically.
 - If you want demo data in production, run `npm run seed` once against your Atlas database before or after deploy.
 - If you use Gmail SMTP, use an app password instead of your normal Gmail password.
-- If `STT_SERVICE_URL` is not set, the app falls back to `AI_SERVICE_URL/transcribe`, and then to browser transcription.
-
-### 4. Optional Dedicated Speech-To-Text Service
-
-If you want accurate server-side speech recognition as a separate deployment:
-
-- Deploy the `stt_service/` folder as a `Python` web service
-- Build command: `pip install -r requirements.txt`
-- Start command: `gunicorn app:app`
-
-Set these environment variables on the STT service:
-
-```bash
-STT_SERVICE_TOKEN=replace-with-a-shared-secret
-STT_MODEL_SIZE=base
-STT_COMPUTE_TYPE=int8
-STT_DEVICE=cpu
-STT_BEAM_SIZE=5
-```
+- If `AI_SERVICE_URL` is not set to a live service, complaint analysis falls back to the built-in Node analyzer.
+- Speech transcription uses Deepgram directly from the Node backend, so you do not need a second speech service deployment.
 
 ## Key Files
 
@@ -204,8 +176,6 @@ STT_BEAM_SIZE=5
   Sends the formal complaint report PDF to BBMP through SMTP
 - `ai_service/app.py`
   Flask microservice for complaint text and image analysis
-- `stt_service/app.py`
-  Dedicated Flask microservice for audio transcription
 
 ## Notes
 

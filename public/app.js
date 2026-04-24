@@ -1613,7 +1613,7 @@ async function transcribeVoiceAudio(sourceFile) {
       throw new Error("No voice recording is available for transcription.");
     }
 
-    voiceTranscriptStatus.textContent = "Sending audio to the speech recognition service...";
+    voiceTranscriptStatus.textContent = "Sending audio to Deepgram for transcription...";
     const result = await apiRequest("/api/transcribe-audio", {
       method: "POST",
       body: JSON.stringify({
@@ -1624,11 +1624,11 @@ async function transcribeVoiceAudio(sourceFile) {
     });
 
     if (!result.transcript) {
-      throw new Error("The speech service did not return transcript text.");
+      throw new Error("Deepgram did not return transcript text.");
     }
 
     updateVoiceTranscriptValue(result.transcript);
-    voiceTranscriptStatus.textContent = "Recording transcribed by the speech service. Review the text before submitting.";
+    voiceTranscriptStatus.textContent = "Recording transcribed by Deepgram. Review the text before submitting.";
   } catch (serviceError) {
     if (!window.browserAudioTranscriber?.transcribeAudioFile) {
       voiceTranscriptStatus.textContent =
@@ -1637,7 +1637,7 @@ async function transcribeVoiceAudio(sourceFile) {
     }
 
     try {
-      voiceTranscriptStatus.textContent = "Speech service unavailable. Falling back to browser transcription...";
+      voiceTranscriptStatus.textContent = "Deepgram is unavailable. Falling back to browser transcription...";
       const browserResult = await window.browserAudioTranscriber.transcribeAudioFile(sourceFile, (statusText) => {
         voiceTranscriptStatus.textContent = statusText;
       });

@@ -990,31 +990,53 @@ async function analyzeComplaint(payload) {
 }
 
 async function transcribeAudio(payload) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  const transcriptionBaseUrl = env.sttServiceUrl || env.aiServiceUrl;
-  const headers = {
-    "Content-Type": "application/json"
-  };
-
-  if (env.sttServiceToken) {
-    headers.Authorization = `Bearer ${env.sttServiceToken}`;
+  if (!env.deepgramApiKey) {
+    throw new Error("Speech recognition is not configured. Add DEEPGRAM_API_KEY to the server environment.");
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
   try {
-    const response = await fetch(`${transcriptionBaseUrl}/transcribe`, {
+    const audioBase64 = String(payload.audioBase64 || "").trim();
+    const mimeType = String(payload.mimeType || "audio/webm").trim();
+
+    if (!audioBase64) {
+      throw new Error("Audio data is required for transcription.");
+    }
+
+    const audioBuffer = Buffer.from(audioBase64, "base64");
+    const query = new URLSearchParams({
+      model: env.deepgramModel,
+      smart_format: "true",
+      punctuate: "true"
+    });
+
+    const response = await fetch(`https://api.deepgram.com/v1/listen?${query.toString()}`, {
       method: "POST",
-      headers,
-      body: JSON.stringify(payload),
+      headers: {
+        Authorization: `Token ${env.deepgramApiKey}`,
+        "Content-Type": mimeType
+      },
+      body: audioBuffer,
       signal: controller.signal
     });
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || "Audio transcription failed.");
+      throw new Error(data.err_msg || data.error || "Deepgram transcription failed.");
     }
 
-    return data;
+    const transcript =
+      data?.results?.channels?.[0]?.alternatives?.[0]?.transcript ||
+      data?.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.transcript ||
+      "";
+
+    return {
+      transcript: String(transcript || "").trim(),
+      language: data?.results?.channels?.[0]?.detected_language || "unknown",
+      provider: "deepgram"
+    };
   } finally {
     clearTimeout(timeout);
   }
