@@ -53,14 +53,16 @@
           </label>
           <label id="authEmailField" hidden>
             Email ID
-            <input type="email" id="authEmail" name="email" placeholder="Enter email address" autocomplete="email" />
+            <div class="auth-inline-field">
+              <input type="email" id="authEmail" name="email" placeholder="Enter email address" autocomplete="email" />
+              <button type="button" id="sendOtpBtn" class="secondary-button" hidden>Send OTP</button>
+            </div>
           </label>
           <label id="authOtpField" hidden>
             OTP
             <input type="text" id="authOtp" name="otp" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6" />
           </label>
           <div class="auth-form-actions">
-            <button type="button" id="sendOtpBtn" class="secondary-button" hidden>Send OTP</button>
             <button type="submit" id="authSubmitBtn" class="light-beam-button">Login</button>
           </div>
         </form>

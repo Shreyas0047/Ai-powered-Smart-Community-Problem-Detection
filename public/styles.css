@@ -1533,6 +1533,13 @@ select:focus {
   flex: 1 1 0;
 }
 
+.auth-inline-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
 [data-reveal] {
   opacity: 0;
   transform: translateY(30px);
