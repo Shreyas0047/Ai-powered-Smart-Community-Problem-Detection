@@ -1067,8 +1067,27 @@ async function transcribeAudio(payload) {
         throw new Error("Deepgram transcription timed out. Try a shorter recording or try again.");
       }
 
+      const causeCode = error?.cause?.code || error?.code || "";
+      const causeMessage = error?.cause?.message || error?.message || "";
+
+      if (causeCode === "ENOTFOUND") {
+        throw new Error("The server could not resolve api.deepgram.com. Check internet or DNS settings.");
+      }
+
+      if (causeCode === "ECONNRESET" || causeCode === "UND_ERR_SOCKET") {
+        throw new Error("The connection to Deepgram was reset. Check firewall, VPN, or outbound HTTPS filtering.");
+      }
+
+      if (causeCode === "ECONNREFUSED") {
+        throw new Error("The outbound connection to Deepgram was refused by the network.");
+      }
+
+      if (/certificate|tls|ssl/i.test(causeMessage)) {
+        throw new Error("TLS/SSL handshake to Deepgram failed. Check system time, certificates, or HTTPS inspection software.");
+      }
+
       throw new Error(
-        "Unable to reach Deepgram from the server. Check internet access, Render outbound networking, and DEEPGRAM_API_KEY."
+        `Unable to reach Deepgram from the server. ${causeCode || causeMessage || "Unknown network error."}`
       );
     }
 
