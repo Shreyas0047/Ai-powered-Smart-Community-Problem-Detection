@@ -51,7 +51,18 @@
             Password
             <input type="password" id="authPassword" name="password" placeholder="Enter password" />
           </label>
-          <button type="submit" id="authSubmitBtn" class="light-beam-button">Login</button>
+          <label id="authEmailField" hidden>
+            Email ID
+            <input type="email" id="authEmail" name="email" placeholder="Enter email address" autocomplete="email" />
+          </label>
+          <label id="authOtpField" hidden>
+            OTP
+            <input type="text" id="authOtp" name="otp" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6" />
+          </label>
+          <div class="auth-form-actions">
+            <button type="button" id="sendOtpBtn" class="secondary-button" hidden>Send OTP</button>
+            <button type="submit" id="authSubmitBtn" class="light-beam-button">Login</button>
+          </div>
         </form>
         <p id="authMessage" class="helper-text">Choose Admin or Citizen, then login or register.</p>
       </div>

@@ -21,6 +21,40 @@ function createTransporter() {
   });
 }
 
+async function sendRegistrationOtpEmail({ email, otp, username }) {
+  const transporter = createTransporter();
+  const safeEmail = String(email || "").trim();
+  const safeUsername = String(username || "Citizen").trim() || "Citizen";
+  const code = String(otp || "").trim();
+
+  if (!safeEmail || !code) {
+    throw new Error("Email and OTP are required before sending the registration mail.");
+  }
+
+  const bodyLines = [
+    `Hello ${safeUsername},`,
+    "",
+    "Your one-time password for AI Smart Community System registration is:",
+    "",
+    code,
+    "",
+    "This OTP is valid for 10 minutes. Do not share it with anyone.",
+    "",
+    "If you did not request this registration, you can ignore this email."
+  ];
+
+  const info = await transporter.sendMail({
+    from: env.smtpUser,
+    to: safeEmail,
+    subject: "Your registration OTP",
+    text: bodyLines.join("\n")
+  });
+
+  return {
+    messageId: info.messageId
+  };
+}
+
 async function sendBbmpComplaintEmail({ subject, report, pdfBase64, filename }) {
   const transporter = createTransporter();
   const safeSubject = String(subject || report?.issueType || "Citizen Complaint Report").trim();
@@ -76,5 +110,6 @@ async function sendBbmpComplaintEmail({ subject, report, pdfBase64, filename }) 
 
 module.exports = {
   isEmailConfigured,
-  sendBbmpComplaintEmail
+  sendBbmpComplaintEmail,
+  sendRegistrationOtpEmail
 };

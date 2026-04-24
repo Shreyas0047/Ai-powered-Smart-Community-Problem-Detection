@@ -1,5 +1,5 @@
 const express = require("express");
-const { getRoles, issueToken, register, login } = require("../controllers/authController");
+const { getRoles, issueToken, requestRegistrationOtp, register, login } = require("../controllers/authController");
 const { getDashboard, resetDashboard } = require("../controllers/dashboardController");
 const { analyzeAndCreateComplaint, transcribeComplaintAudio, updateComplaintStatus, acknowledgeAlert } = require("../controllers/complaintController");
 const { emailBbmpComplaint } = require("../controllers/emailController");
@@ -11,6 +11,7 @@ const router = express.Router();
 
 router.get("/roles", getRoles);
 router.post("/auth/token", issueToken);
+router.post("/auth/register/request-otp", requestRegistrationOtp);
 router.post("/auth/register", register);
 router.post("/auth/login", login);
 

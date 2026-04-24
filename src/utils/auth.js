@@ -58,9 +58,32 @@ function verifyPassword(password, storedHash) {
   }
 }
 
+function hashOneTimeCode(code) {
+  return crypto.createHash("sha256").update(String(code || "")).digest("hex");
+}
+
+function verifyOneTimeCode(code, storedHash) {
+  const provided = hashOneTimeCode(code);
+
+  try {
+    const left = Buffer.from(provided, "hex");
+    const right = Buffer.from(String(storedHash || ""), "hex");
+
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(left, right);
+  } catch (_error) {
+    return false;
+  }
+}
+
 module.exports = {
   issueRoleToken,
   verifyToken,
   hashPassword,
-  verifyPassword
+  verifyPassword,
+  hashOneTimeCode,
+  verifyOneTimeCode
 };

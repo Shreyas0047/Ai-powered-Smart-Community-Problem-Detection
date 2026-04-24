@@ -44,6 +44,11 @@ const closeFaqBtn = document.getElementById("closeFaqBtn");
 const authForm = document.getElementById("authForm");
 const authSubmitBtn = document.getElementById("authSubmitBtn");
 const authMessage = document.getElementById("authMessage");
+const authEmailField = document.getElementById("authEmailField");
+const authEmailInput = document.getElementById("authEmail");
+const authOtpField = document.getElementById("authOtpField");
+const authOtpInput = document.getElementById("authOtp");
+const sendOtpBtn = document.getElementById("sendOtpBtn");
 const mobileMenuToggle = document.getElementById("mobileMenuToggle");
 const siteNav = document.getElementById("siteNav");
 const showLoginBtn = document.getElementById("showLoginBtn");
@@ -86,6 +91,7 @@ let voiceMediaRecorder = null;
 let voiceRecordingChunks = [];
 let voiceRecordingStartedAt = 0;
 let isVoiceRecording = false;
+let registrationOtpIssued = false;
 
 const permissionMeta = {
   submit_complaint: { label: "Submit Complaint", target: () => reportFormWorkspace },
@@ -415,11 +421,18 @@ function openAuthOverlay(mode = "login") {
   }
   showLoginBtn.classList.toggle("is-active", mode === "login");
   showRegisterBtn.classList.toggle("is-active", mode === "register");
-  authSubmitBtn.textContent = mode === "login" ? "Login" : "Register";
+  const isRegisterMode = mode === "register";
+  authEmailField.hidden = !isRegisterMode;
+  authOtpField.hidden = !isRegisterMode;
+  sendOtpBtn.hidden = !isRegisterMode;
+  authEmailInput.disabled = !isRegisterMode;
+  authOtpInput.disabled = !isRegisterMode;
+  registrationOtpIssued = false;
+  authSubmitBtn.textContent = mode === "login" ? "Login" : "Verify OTP & Register";
   authMessage.textContent =
     mode === "login"
       ? "Choose Admin or Citizen, then login with your username and password."
-      : "Choose Admin or Citizen, create a username and password, then register.";
+      : "Choose Admin or Citizen, enter username, email, and password, then request an OTP to complete registration.";
 }
 
 function closeAuthOverlay() {
@@ -645,6 +658,30 @@ function getAuthSuccessMessage(mode, data) {
   }
 
   return `Login successful. ${data.username} is now logged in as ${data.role}.`;
+}
+
+async function requestRegistrationOtp() {
+  try {
+    sendOtpBtn.disabled = true;
+    authSubmitBtn.disabled = true;
+    const formData = new FormData(authForm);
+    const payload = Object.fromEntries(formData.entries());
+    delete payload.otp;
+    const data = await apiRequest("/api/auth/register/request-otp", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    registrationOtpIssued = true;
+    authMessage.textContent = data.message;
+    setDashboardMessage(data.message, "success");
+    authOtpInput.focus();
+  } catch (error) {
+    authMessage.textContent = error.message;
+    setDashboardMessage(error.message, "error");
+  } finally {
+    sendOtpBtn.disabled = false;
+    authSubmitBtn.disabled = false;
+  }
 }
 
 function formatDateTime(value) {
@@ -1658,12 +1695,24 @@ async function transcribeVoiceAudio(sourceFile) {
   }
 }
 
+async function requestRecorderPermission() {
+  if (!window.isSecureContext) {
+    throw new Error("Microphone recording requires HTTPS or localhost.");
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("This browser does not support microphone recording.");
+  }
+
+  return navigator.mediaDevices.getUserMedia({ audio: true });
+}
+
 async function startVoiceRecording() {
   if (isVoiceRecording) {
     return;
   }
 
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+  if (!window.MediaRecorder) {
     voiceTranscriptStatus.textContent =
       "Live recording is not supported in this browser. Use a supported browser or type the complaint summary manually.";
     return;
@@ -1671,7 +1720,8 @@ async function startVoiceRecording() {
 
   try {
     const mimeType = getSupportedRecordingMimeType();
-    voiceRecorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceTranscriptStatus.textContent = "Requesting microphone permission...";
+    voiceRecorderStream = await requestRecorderPermission();
     voiceRecordingChunks = [];
     voiceMediaRecorder = mimeType
       ? new MediaRecorder(voiceRecorderStream, { mimeType })
@@ -1730,7 +1780,7 @@ async function startVoiceRecording() {
     voiceTranscriptStatus.textContent =
       error?.name === "NotAllowedError"
         ? "Microphone access is blocked. Allow microphone access and try recording again."
-        : "Unable to start live recording. Check microphone access and try again.";
+        : error?.message || "Unable to start live recording. Check microphone access and try again.";
   }
 }
 
@@ -2022,6 +2072,7 @@ showAiAccuracyBtn.addEventListener("click", () => {
 
 showLoginBtn.addEventListener("click", () => openAuthOverlay("login"));
 showRegisterBtn.addEventListener("click", () => openAuthOverlay("register"));
+sendOtpBtn?.addEventListener("click", requestRegistrationOtp);
 issueTokenBtn.addEventListener("click", () => openAuthOverlay("login"));
 closeAuthBtn.addEventListener("click", closeAuthOverlay);
 openFaqLink?.addEventListener("click", (event) => {
@@ -2127,6 +2178,11 @@ authForm.addEventListener("submit", async (event) => {
     authSubmitBtn.disabled = true;
     const formData = new FormData(authForm);
     const payload = Object.fromEntries(formData.entries());
+
+    if (authMode === "register" && !registrationOtpIssued) {
+      throw new Error("Send the OTP to your email before completing registration.");
+    }
+
     const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
     const data = await apiRequest(endpoint, {
       method: "POST",
@@ -2139,6 +2195,7 @@ authForm.addEventListener("submit", async (event) => {
     const successMessage = getAuthSuccessMessage(authMode, data);
     authMessage.textContent = successMessage;
     setDashboardMessage(successMessage, "success");
+    registrationOtpIssued = false;
     authForm.reset();
     closeAuthOverlay();
     goToMainDashboard();

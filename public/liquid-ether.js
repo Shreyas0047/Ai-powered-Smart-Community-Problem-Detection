@@ -46,7 +46,7 @@ const fragmentShader = `
     float value = 0.0;
     float amplitude = 0.5;
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
       value += amplitude * noise(p);
       p *= 2.02;
       amplitude *= 0.5;
@@ -124,6 +124,18 @@ function parseColors(value) {
   return palette.slice(0, 4).map(hexToThreeColor);
 }
 
+function shouldUseLiquidEther() {
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    return false;
+  }
+
+  if (window.innerWidth < 920) {
+    return false;
+  }
+
+  return Boolean(window.WebGLRenderingContext);
+}
+
 class LiquidEtherBackground {
   constructor(host) {
     this.host = host;
@@ -138,10 +150,10 @@ class LiquidEtherBackground {
 
     this.renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: true,
+      antialias: false,
       powerPreference: "high-performance"
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.0));
     this.renderer.setClearColor(0x000000, 0);
 
     this.scene = new THREE.Scene();
@@ -223,14 +235,14 @@ class LiquidEtherBackground {
     const idleSeconds = (now - this.lastInteraction) / 1000;
 
     if (idleSeconds > 1.5) {
-      this.autoPhase += 0.0038;
+    this.autoPhase += 0.0028;
       this.pointerTarget.set(
         0.5 + Math.cos(this.autoPhase) * 0.18,
         0.52 + Math.sin(this.autoPhase * 1.27) * 0.14
       );
     }
 
-    this.pointer.lerp(this.pointerTarget, 0.06);
+    this.pointer.lerp(this.pointerTarget, 0.045);
     this.material.uniforms.uPointer.value.copy(this.pointer);
     this.material.uniforms.uTime.value = elapsed;
 
@@ -258,7 +270,7 @@ class LiquidEtherBackground {
 }
 
 const hosts = Array.from(document.querySelectorAll("[data-liquid-ether]"));
-const instances = hosts.map((host) => new LiquidEtherBackground(host));
+const instances = shouldUseLiquidEther() ? hosts.map((host) => new LiquidEtherBackground(host)) : [];
 
 window.addEventListener("beforeunload", () => {
   instances.forEach((instance) => instance.dispose());
