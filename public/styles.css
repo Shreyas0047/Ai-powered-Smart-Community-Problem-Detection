@@ -1474,6 +1474,12 @@ select:focus {
   display: none !important;
 }
 
+#authEmailField[hidden],
+#authOtpField[hidden],
+#sendOtpBtn[hidden] {
+  display: none !important;
+}
+
 .auth-screen {
   width: min(540px, 100%);
   padding: 28px 24px;
