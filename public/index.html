@@ -103,7 +103,32 @@
       <header class="site-header">
         <a href="#mainDashboard" class="brand-lockup">
           <span class="brand-mark">
-            <span class="brand-mark-dot"></span>
+            <svg viewBox="0 0 64 64" class="brand-mark-svg" aria-hidden="true">
+              <defs>
+                <linearGradient id="brandGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#ffb7b2" />
+                  <stop offset="50%" stop-color="#ff8a7e" />
+                  <stop offset="100%" stop-color="#ff6b5f" />
+                </linearGradient>
+              </defs>
+              <rect x="6" y="6" width="52" height="52" rx="18" fill="url(#brandGradient)" />
+              <path
+                d="M20 38c3.4-7.8 9.5-14 18.5-18.5"
+                fill="none"
+                stroke="#fff"
+                stroke-width="4.5"
+                stroke-linecap="round"
+              />
+              <path
+                d="M25 43c2.2-5.3 6.9-9.7 13.9-13"
+                fill="none"
+                stroke="#fff"
+                stroke-opacity="0.75"
+                stroke-width="3.25"
+                stroke-linecap="round"
+              />
+              <circle cx="43" cy="21" r="5.5" fill="#fff" />
+            </svg>
           </span>
           <span class="brand-copy">
             <span class="brand-kicker">Digital wellness for civic action</span>
@@ -123,7 +148,6 @@
           <a href="#mapWorkspace" class="nav-link">Map</a>
           <div class="nav-actions">
             <button type="button" id="audioToggleBtn" class="chip-button">Sound On</button>
-            <button type="button" id="testMicrophoneBtn" class="chip-button">Test Microphone</button>
             <button type="button" id="issueTokenBtn" class="login-button light-beam-button">Login</button>
           </div>
         </nav>
@@ -291,7 +315,7 @@
                     <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
                   </div>
                   <p id="voiceTranscriptStatus" class="helper-text">
-                    Select Voice transcript, upload the voice note, then either transcribe it or type the complaint summary manually.
+                    Select Voice transcript, upload the voice note, then transcribe it through the speech service or type the complaint summary manually.
                   </p>
                 </div>
                 <label>

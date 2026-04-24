@@ -121,22 +121,16 @@ select {
 
 .brand-mark {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--coral);
-  box-shadow: 0 10px 24px -12px rgba(255, 183, 178, 0.9);
+  filter: drop-shadow(0 12px 18px rgba(255, 107, 95, 0.22));
 }
 
-.brand-mark-dot {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 9px;
-  height: 9px;
-  background: #fff;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+.brand-mark-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .brand-copy {

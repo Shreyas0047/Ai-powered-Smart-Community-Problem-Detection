@@ -992,13 +992,19 @@ async function analyzeComplaint(payload) {
 async function transcribeAudio(payload) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
+  const transcriptionBaseUrl = env.sttServiceUrl || env.aiServiceUrl;
+  const headers = {
+    "Content-Type": "application/json"
+  };
+
+  if (env.sttServiceToken) {
+    headers.Authorization = `Bearer ${env.sttServiceToken}`;
+  }
 
   try {
-    const response = await fetch(`${env.aiServiceUrl}/transcribe`, {
+    const response = await fetch(`${transcriptionBaseUrl}/transcribe`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers,
       body: JSON.stringify(payload),
       signal: controller.signal
     });

@@ -11,6 +11,8 @@ module.exports = {
   jwtSecret: process.env.JWT_SECRET || "smart-community-demo-secret",
   tokenTtlSeconds: 60 * 60 * 8,
   aiServiceUrl: process.env.AI_SERVICE_URL || "http://127.0.0.1:5000",
+  sttServiceUrl: process.env.STT_SERVICE_URL || "",
+  sttServiceToken: process.env.STT_SERVICE_TOKEN || "",
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
   smtpHost: process.env.SMTP_HOST || "",

@@ -28,7 +28,6 @@ const emailProgressLabel = document.getElementById("emailProgressLabel");
 const emailProgressValue = document.getElementById("emailProgressValue");
 const emailProgressFill = document.getElementById("emailProgressFill");
 const audioToggleBtn = document.getElementById("audioToggleBtn");
-const testMicrophoneBtn = document.getElementById("testMicrophoneBtn");
 const dashboardMessage = document.getElementById("dashboardMessage");
 const issueTokenBtn = document.getElementById("issueTokenBtn");
 const authRole = document.getElementById("authRole");
@@ -78,7 +77,6 @@ let ambienceGain = null;
 let ambienceTimer = null;
 let ambienceStarted = false;
 let emailProgressTimer = null;
-let lastMicrophoneAccessState = "unknown";
 let currentVoiceAudioData = null;
 let currentVoiceAudioObjectUrl = null;
 
@@ -1521,79 +1519,10 @@ function updateVoiceTranscriptValue(finalText, interimText = "") {
   voiceTranscriptInput.value = [finalText.trim(), interimText.trim()].filter(Boolean).join(" ").trim();
 }
 
-async function getMicrophonePermissionState() {
-  if (!navigator.permissions?.query) {
-    return "unknown";
-  }
-
-  try {
-    const result = await navigator.permissions.query({ name: "microphone" });
-    return result.state || "unknown";
-  } catch (_error) {
-    return "unknown";
-  }
-}
-
-function isBraveBrowser() {
-  return Boolean(navigator.brave);
-}
-
-async function verifyMicrophoneAccess() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    lastMicrophoneAccessState = "unknown";
-    return "unknown";
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((track) => track.stop());
-    lastMicrophoneAccessState = "granted";
-    return "granted";
-  } catch (error) {
-    if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
-      lastMicrophoneAccessState = "denied";
-      return "denied";
-    }
-
-    lastMicrophoneAccessState = "unavailable";
-    return "unavailable";
-  }
-}
-
-async function runMicrophoneDiagnostic() {
-  testMicrophoneBtn.disabled = true;
-
-  try {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setDashboardMessage("This browser does not support direct microphone capture testing.", "error");
-      return;
-    }
-
-    setDashboardMessage("Testing microphone access...", "info");
-    const microphoneState = await verifyMicrophoneAccess();
-
-    if (microphoneState === "granted") {
-      setDashboardMessage("Microphone test passed. Raw microphone capture is available for this page.", "success");
-      return;
-    }
-
-    if (microphoneState === "denied") {
-      setDashboardMessage(
-        "Microphone test failed. Access is blocked for this page or by Windows privacy settings.",
-        "error"
-      );
-      return;
-    }
-
-    setDashboardMessage(
-      "Microphone test could not find a working input device. Check the selected microphone in Windows sound settings.",
-      "error"
-    );
-  } catch (_error) {
-    setDashboardMessage("Microphone test could not complete. Check browser and system microphone settings.", "error");
-  } finally {
-    testMicrophoneBtn.disabled = false;
-  }
+function extractBase64Payload(dataUrl) {
+  const value = String(dataUrl || "");
+  const commaIndex = value.indexOf(",");
+  return commaIndex >= 0 ? value.slice(commaIndex + 1) : value;
 }
 
 function clearVoiceAudioSelection() {
@@ -1647,7 +1576,7 @@ async function setupVoiceAudioFile() {
   }
   voiceTranscriptStatus.textContent = existingTranscript
     ? "Audio file attached. Review your typed summary and submit the complaint."
-    : "Audio file ready. Click Transcribe Audio or type the complaint summary manually.";
+    : "Audio file ready. Click Transcribe Audio to use the speech service, or type the complaint summary manually.";
 }
 
 async function transcribeUploadedAudio() {
@@ -1657,31 +1586,55 @@ async function transcribeUploadedAudio() {
     return;
   }
 
-  if (!window.browserAudioTranscriber?.transcribeAudioFile) {
-    voiceTranscriptStatus.textContent =
-      "Browser transcription is unavailable here. Type the complaint summary manually.";
-    return;
-  }
-
   transcribeAudioBtn.disabled = true;
 
   try {
-    const result = await window.browserAudioTranscriber.transcribeAudioFile(file, (statusText) => {
-      voiceTranscriptStatus.textContent = statusText;
+    if (!currentVoiceAudioData?.dataUrl) {
+      throw new Error("The uploaded audio could not be prepared for transcription.");
+    }
+
+    voiceTranscriptStatus.textContent = "Sending audio to the speech recognition service...";
+    const result = await apiRequest("/api/transcribe-audio", {
+      method: "POST",
+      body: JSON.stringify({
+        audioBase64: extractBase64Payload(currentVoiceAudioData.dataUrl),
+        filename: currentVoiceAudioData.filename,
+        mimeType: currentVoiceAudioData.mimeType
+      })
     });
 
-    if (!result.text) {
+    if (!result.transcript) {
+      throw new Error("The speech service did not return transcript text.");
+    }
+
+    updateVoiceTranscriptValue(result.transcript);
+    voiceTranscriptStatus.textContent = "Audio transcribed by the speech service. Review the text before submitting.";
+  } catch (serviceError) {
+    if (!window.browserAudioTranscriber?.transcribeAudioFile) {
       voiceTranscriptStatus.textContent =
-        "No transcript text was produced. Type the complaint summary manually.";
+        serviceError?.message || "Audio transcription failed. Type the complaint summary manually.";
       return;
     }
 
-    updateVoiceTranscriptValue(result.text);
-    voiceTranscriptStatus.textContent =
-      "Audio transcribed in the browser. Review the text before submitting.";
-  } catch (error) {
-    voiceTranscriptStatus.textContent =
-      error?.message || "Audio transcription failed in the browser. Type the complaint summary manually.";
+    try {
+      voiceTranscriptStatus.textContent = "Speech service unavailable. Falling back to browser transcription...";
+      const browserResult = await window.browserAudioTranscriber.transcribeAudioFile(file, (statusText) => {
+        voiceTranscriptStatus.textContent = statusText;
+      });
+
+      if (!browserResult.text) {
+        throw new Error("No transcript text was produced. Type the complaint summary manually.");
+      }
+
+      updateVoiceTranscriptValue(browserResult.text);
+      voiceTranscriptStatus.textContent =
+        "Audio transcribed in the browser fallback. Review the text before submitting.";
+    } catch (browserError) {
+      voiceTranscriptStatus.textContent =
+        browserError?.message ||
+        serviceError?.message ||
+        "Audio transcription failed. Type the complaint summary manually.";
+    }
   } finally {
     transcribeAudioBtn.disabled = !voiceAudioFileInput.files?.[0];
   }
@@ -1703,7 +1656,7 @@ function setComplaintInputMode(mode) {
     }
     if (!voiceTranscriptInput.value.trim()) {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
-        ? "Audio file attached. Click Transcribe Audio or type the complaint summary manually."
+        ? "Audio file attached. Click Transcribe Audio to use the speech service, or type the complaint summary manually."
         : "Upload an audio file and type the complaint summary manually.";
     } else {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
@@ -2034,7 +1987,6 @@ audioToggleBtn.addEventListener("click", async () => {
     setDashboardMessage("Interface sound muted.", "info");
   }
 });
-testMicrophoneBtn.addEventListener("click", runMicrophoneDiagnostic);
 reportLocationInput.addEventListener("input", (event) => {
   updateLiveLocationMap(event.target.value);
 });
