@@ -5,10 +5,12 @@ const typedComplaintField = document.getElementById("typedComplaintField");
 const typedComplaintInput = document.getElementById("typedComplaintInput");
 const voiceComplaintField = document.getElementById("voiceComplaintField");
 const voiceTranscriptInput = document.getElementById("voiceTranscriptInput");
-const voiceAudioFileInput = document.getElementById("voiceAudioFile");
+const startRecordingBtn = document.getElementById("startRecordingBtn");
+const stopRecordingBtn = document.getElementById("stopRecordingBtn");
+const clearRecordingBtn = document.getElementById("clearRecordingBtn");
+const recordingIndicator = document.getElementById("recordingIndicator");
 const voiceAudioPreview = document.getElementById("voiceAudioPreview");
 const voiceAudioMeta = document.getElementById("voiceAudioMeta");
-const transcribeAudioBtn = document.getElementById("transcribeAudioBtn");
 const voiceTranscriptStatus = document.getElementById("voiceTranscriptStatus");
 const imageFileInput = document.getElementById("imageFile");
 const aiImageDescription = document.getElementById("aiImageDescription");
@@ -79,6 +81,11 @@ let ambienceStarted = false;
 let emailProgressTimer = null;
 let currentVoiceAudioData = null;
 let currentVoiceAudioObjectUrl = null;
+let voiceRecorderStream = null;
+let voiceMediaRecorder = null;
+let voiceRecordingChunks = [];
+let voiceRecordingStartedAt = 0;
+let isVoiceRecording = false;
 
 const permissionMeta = {
   submit_complaint: { label: "Submit Complaint", target: () => reportFormWorkspace },
@@ -1525,7 +1532,60 @@ function extractBase64Payload(dataUrl) {
   return commaIndex >= 0 ? value.slice(commaIndex + 1) : value;
 }
 
+function getSupportedRecordingMimeType() {
+  if (!window.MediaRecorder) {
+    return "";
+  }
+
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4"
+  ];
+
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+function getRecordingExtension(mimeType) {
+  if (mimeType.includes("ogg")) return "ogg";
+  if (mimeType.includes("mp4")) return "m4a";
+  return "webm";
+}
+
+function stopVoiceRecorderStream() {
+  if (voiceRecorderStream) {
+    voiceRecorderStream.getTracks().forEach((track) => track.stop());
+    voiceRecorderStream = null;
+  }
+}
+
+function updateVoiceRecordingUi() {
+  const hasAudio = Boolean(currentVoiceAudioData?.dataUrl);
+  const isVoiceMode = complaintInputMode.value === "voice";
+
+  startRecordingBtn.disabled = !isVoiceMode || isVoiceRecording;
+  stopRecordingBtn.disabled = !isVoiceMode || !isVoiceRecording;
+  clearRecordingBtn.disabled = !isVoiceMode || isVoiceRecording || !hasAudio;
+  recordingIndicator.hidden = !isVoiceRecording;
+  recordingIndicator.dataset.state = isVoiceRecording ? "live" : "idle";
+}
+
 function clearVoiceAudioSelection() {
+  if (voiceMediaRecorder && voiceMediaRecorder.state !== "inactive") {
+    try {
+      voiceMediaRecorder.stop();
+    } catch (_error) {
+      // ignore stop failures during cleanup
+    }
+  }
+
+  voiceMediaRecorder = null;
+  voiceRecordingChunks = [];
+  voiceRecordingStartedAt = 0;
+  isVoiceRecording = false;
+  stopVoiceRecorderStream();
+
   if (currentVoiceAudioObjectUrl) {
     URL.revokeObjectURL(currentVoiceAudioObjectUrl);
     currentVoiceAudioObjectUrl = null;
@@ -1534,7 +1594,8 @@ function clearVoiceAudioSelection() {
   currentVoiceAudioData = null;
   voiceAudioPreview.hidden = true;
   voiceAudioPreview.removeAttribute("src");
-  voiceAudioMeta.textContent = "No audio file selected.";
+  voiceAudioMeta.textContent = "No recording captured yet.";
+  updateVoiceRecordingUi();
 }
 
 async function readFileAsDataUrl(file) {
@@ -1546,51 +1607,10 @@ async function readFileAsDataUrl(file) {
   });
 }
 
-async function setupVoiceAudioFile() {
-  const file = voiceAudioFileInput.files?.[0];
-  const existingTranscript = voiceTranscriptInput.value.trim();
-  clearVoiceAudioSelection();
-  updateVoiceTranscriptValue(existingTranscript);
-
-  if (!file) {
-    if (transcribeAudioBtn) {
-      transcribeAudioBtn.disabled = true;
-    }
-    voiceTranscriptStatus.textContent = existingTranscript
-      ? "Audio removed. You can still submit the typed voice complaint summary."
-      : "Upload an audio file and type the complaint summary manually.";
-    return;
-  }
-
-  currentVoiceAudioObjectUrl = URL.createObjectURL(file);
-  voiceAudioPreview.src = currentVoiceAudioObjectUrl;
-  voiceAudioPreview.hidden = false;
-  voiceAudioMeta.textContent = `${file.name} - ${file.type || "audio"} - ${Math.max(1, Math.round(file.size / 1024))} KB`;
-  currentVoiceAudioData = {
-    filename: file.name,
-    mimeType: file.type || "application/octet-stream",
-    dataUrl: await readFileAsDataUrl(file)
-  };
-  if (transcribeAudioBtn) {
-    transcribeAudioBtn.disabled = false;
-  }
-  voiceTranscriptStatus.textContent = existingTranscript
-    ? "Audio file attached. Review your typed summary and submit the complaint."
-    : "Audio file ready. Click Transcribe Audio to use the speech service, or type the complaint summary manually.";
-}
-
-async function transcribeUploadedAudio() {
-  const file = voiceAudioFileInput.files?.[0];
-  if (!file) {
-    voiceTranscriptStatus.textContent = "Upload an audio file before requesting transcription.";
-    return;
-  }
-
-  transcribeAudioBtn.disabled = true;
-
+async function transcribeVoiceAudio(sourceFile) {
   try {
     if (!currentVoiceAudioData?.dataUrl) {
-      throw new Error("The uploaded audio could not be prepared for transcription.");
+      throw new Error("No voice recording is available for transcription.");
     }
 
     voiceTranscriptStatus.textContent = "Sending audio to the speech recognition service...";
@@ -1608,7 +1628,7 @@ async function transcribeUploadedAudio() {
     }
 
     updateVoiceTranscriptValue(result.transcript);
-    voiceTranscriptStatus.textContent = "Audio transcribed by the speech service. Review the text before submitting.";
+    voiceTranscriptStatus.textContent = "Recording transcribed by the speech service. Review the text before submitting.";
   } catch (serviceError) {
     if (!window.browserAudioTranscriber?.transcribeAudioFile) {
       voiceTranscriptStatus.textContent =
@@ -1618,7 +1638,7 @@ async function transcribeUploadedAudio() {
 
     try {
       voiceTranscriptStatus.textContent = "Speech service unavailable. Falling back to browser transcription...";
-      const browserResult = await window.browserAudioTranscriber.transcribeAudioFile(file, (statusText) => {
+      const browserResult = await window.browserAudioTranscriber.transcribeAudioFile(sourceFile, (statusText) => {
         voiceTranscriptStatus.textContent = statusText;
       });
 
@@ -1628,16 +1648,99 @@ async function transcribeUploadedAudio() {
 
       updateVoiceTranscriptValue(browserResult.text);
       voiceTranscriptStatus.textContent =
-        "Audio transcribed in the browser fallback. Review the text before submitting.";
+        "Recording transcribed in the browser fallback. Review the text before submitting.";
     } catch (browserError) {
       voiceTranscriptStatus.textContent =
         browserError?.message ||
         serviceError?.message ||
         "Audio transcription failed. Type the complaint summary manually.";
     }
-  } finally {
-    transcribeAudioBtn.disabled = !voiceAudioFileInput.files?.[0];
   }
+}
+
+async function startVoiceRecording() {
+  if (isVoiceRecording) {
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    voiceTranscriptStatus.textContent =
+      "Live recording is not supported in this browser. Use a supported browser or type the complaint summary manually.";
+    return;
+  }
+
+  try {
+    const mimeType = getSupportedRecordingMimeType();
+    voiceRecorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceRecordingChunks = [];
+    voiceMediaRecorder = mimeType
+      ? new MediaRecorder(voiceRecorderStream, { mimeType })
+      : new MediaRecorder(voiceRecorderStream);
+
+    voiceMediaRecorder.addEventListener("dataavailable", (event) => {
+      if (event.data && event.data.size > 0) {
+        voiceRecordingChunks.push(event.data);
+      }
+    });
+
+    voiceMediaRecorder.addEventListener("stop", async () => {
+      const finalMimeType = voiceMediaRecorder?.mimeType || mimeType || "audio/webm";
+      const blob = new Blob(voiceRecordingChunks, { type: finalMimeType });
+      const durationSeconds = voiceRecordingStartedAt
+        ? Math.max(1, Math.round((Date.now() - voiceRecordingStartedAt) / 1000))
+        : null;
+
+      isVoiceRecording = false;
+      stopVoiceRecorderStream();
+      updateVoiceRecordingUi();
+
+      if (!blob.size) {
+        voiceTranscriptStatus.textContent = "No audio was captured. Record again and speak clearly.";
+        voiceAudioMeta.textContent = "No recording captured yet.";
+        return;
+      }
+
+      clearVoiceAudioSelection();
+      const filename = `voice-complaint-${Date.now()}.${getRecordingExtension(finalMimeType)}`;
+      const recordingFile = new File([blob], filename, { type: finalMimeType });
+
+      currentVoiceAudioObjectUrl = URL.createObjectURL(blob);
+      voiceAudioPreview.src = currentVoiceAudioObjectUrl;
+      voiceAudioPreview.hidden = false;
+      currentVoiceAudioData = {
+        filename,
+        mimeType: finalMimeType,
+        dataUrl: await readFileAsDataUrl(recordingFile)
+      };
+      voiceAudioMeta.textContent = `${filename} - ${durationSeconds || 1}s - ${Math.max(1, Math.round(blob.size / 1024))} KB`;
+      voiceTranscriptStatus.textContent = "Recording captured. Transcribing now...";
+      updateVoiceRecordingUi();
+      await transcribeVoiceAudio(recordingFile);
+    });
+
+    voiceRecordingStartedAt = Date.now();
+    isVoiceRecording = true;
+    updateVoiceRecordingUi();
+    voiceMediaRecorder.start();
+    voiceTranscriptStatus.textContent = "Recording in progress. Speak your complaint, then press Stop Recording.";
+  } catch (error) {
+    isVoiceRecording = false;
+    stopVoiceRecorderStream();
+    updateVoiceRecordingUi();
+    voiceTranscriptStatus.textContent =
+      error?.name === "NotAllowedError"
+        ? "Microphone access is blocked. Allow microphone access and try recording again."
+        : "Unable to start live recording. Check microphone access and try again.";
+  }
+}
+
+function stopVoiceRecording() {
+  if (!voiceMediaRecorder || voiceMediaRecorder.state === "inactive") {
+    return;
+  }
+
+  voiceTranscriptStatus.textContent = "Stopping recording and preparing transcription...";
+  voiceMediaRecorder.stop();
 }
 
 function setComplaintInputMode(mode) {
@@ -1649,24 +1752,22 @@ function setComplaintInputMode(mode) {
   voiceComplaintField.hidden = !isVoiceMode;
   voiceComplaintField.style.display = isVoiceMode ? "" : "none";
   voiceTranscriptInput.disabled = !isVoiceMode;
+  updateVoiceRecordingUi();
 
   if (isVoiceMode) {
-    if (transcribeAudioBtn) {
-      transcribeAudioBtn.disabled = !currentVoiceAudioData?.dataUrl;
-    }
     if (!voiceTranscriptInput.value.trim()) {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
-        ? "Audio file attached. Click Transcribe Audio to use the speech service, or type the complaint summary manually."
-        : "Upload an audio file and type the complaint summary manually.";
+        ? "Recording captured. Review the transcript or record again."
+        : "Record your complaint and the transcript will appear here automatically.";
     } else {
       voiceTranscriptStatus.textContent = currentVoiceAudioData?.dataUrl
-        ? "Audio file attached. Review your typed summary and submit the complaint."
-        : "Typed voice complaint summary ready. You can submit now or attach the original audio.";
+        ? "Recording captured. Review the transcript and submit when ready."
+        : "Voice complaint summary ready. You can submit now or record again.";
     }
     return;
   }
 
-  voiceTranscriptStatus.textContent = "Select Voice transcript to upload an audio file and type the complaint summary manually.";
+  voiceTranscriptStatus.textContent = "Select Voice transcript to record your complaint live.";
 }
 
 function getComplaintTextPayload() {
@@ -1692,16 +1793,13 @@ function setupComplaintInputMode() {
     setComplaintInputMode(event.target.value);
   });
 
-  voiceAudioFileInput.addEventListener("change", () => {
-    setupVoiceAudioFile().catch((error) => {
-      clearVoiceAudioSelection();
-      if (transcribeAudioBtn) {
-        transcribeAudioBtn.disabled = true;
-      }
-      voiceTranscriptStatus.textContent = error.message;
-    });
+  startRecordingBtn?.addEventListener("click", startVoiceRecording);
+  stopRecordingBtn?.addEventListener("click", stopVoiceRecording);
+  clearRecordingBtn?.addEventListener("click", () => {
+    clearVoiceAudioSelection();
+    updateVoiceTranscriptValue("");
+    voiceTranscriptStatus.textContent = "Recording cleared. Record your complaint again to generate a new transcript.";
   });
-  transcribeAudioBtn?.addEventListener("click", transcribeUploadedAudio);
   voiceTranscriptInput.addEventListener("input", () => {
     if (complaintInputMode.value !== "voice") {
       return;
@@ -1710,11 +1808,11 @@ function setupComplaintInputMode() {
     const hasTranscript = Boolean(voiceTranscriptInput.value.trim());
     voiceTranscriptStatus.textContent = hasTranscript
       ? currentVoiceAudioData?.dataUrl
-        ? "Audio file attached. Review your typed summary and submit the complaint."
-        : "Typed voice complaint summary ready. You can submit now or attach the original audio."
+        ? "Recording captured. Review the transcript and submit when ready."
+        : "Voice complaint summary ready. You can submit now or record again."
       : currentVoiceAudioData?.dataUrl
-        ? "Audio file attached. Type the complaint summary manually before submitting."
-        : "Upload an audio file and type the complaint summary manually.";
+        ? "Recording captured. Speak again or edit the summary manually before submitting."
+        : "Record your complaint and the transcript will appear here automatically.";
   });
 }
 
@@ -1770,9 +1868,6 @@ function resetComposer() {
   updateLiveLocationMap("");
   clearVoiceAudioSelection();
   updateVoiceTranscriptValue("");
-  if (transcribeAudioBtn) {
-    transcribeAudioBtn.disabled = true;
-  }
   setComplaintInputMode(complaintInputMode.value || "text");
 }
 

@@ -300,22 +300,24 @@
                       id="voiceTranscriptInput"
                       name="voiceTranscript"
                       rows="4"
-                      placeholder="Upload the audio file, then type the spoken complaint as a short transcript or summary"
+                      placeholder="Record your complaint and the transcript will appear here. You can edit it before submitting."
                     ></textarea>
                   </label>
-                  <div class="audio-upload-group">
-                    <label class="audio-upload-label">
-                      Upload audio
-                      <input type="file" id="voiceAudioFile" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg" />
-                    </label>
-                    <button type="button" id="transcribeAudioBtn" class="secondary-button">Transcribe Audio</button>
+                  <div class="voice-recording-toolbar">
+                    <button type="button" id="startRecordingBtn" class="secondary-button">Start Recording</button>
+                    <button type="button" id="stopRecordingBtn" class="secondary-button" disabled>Stop Recording</button>
+                    <button type="button" id="clearRecordingBtn" class="chip-button" disabled>Clear Recording</button>
+                    <span id="recordingIndicator" class="recording-indicator" hidden>
+                      <span class="recording-dot"></span>
+                      Recording
+                    </span>
                   </div>
                   <audio id="voiceAudioPreview" class="voice-audio-preview" controls hidden></audio>
                   <div class="voice-actions">
-                    <p id="voiceAudioMeta" class="helper-text">No audio file selected.</p>
+                    <p id="voiceAudioMeta" class="helper-text">No recording captured yet.</p>
                   </div>
                   <p id="voiceTranscriptStatus" class="helper-text">
-                    Select Voice transcript, upload the voice note, then transcribe it through the speech service or type the complaint summary manually.
+                    Select Voice transcript, record your complaint, and the app will transcribe it into the summary field.
                   </p>
                 </div>
                 <label>
