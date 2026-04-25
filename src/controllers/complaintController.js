@@ -1,59 +1,13 @@
 const Complaint = require("../models/Complaint");
-const { analyzeComplaint, transcribeAudio } = require("../services/aiClient");
+const { transcribeAudio } = require("../services/aiClient");
+const { createComplaintFromPayload, createHttpError } = require("../services/complaintService");
 
 const ALLOWED_STATUSES = ["Queued", "In Progress", "Resolved", "Escalated"];
 const ALLOWED_PRIORITIES = ["Low", "Medium", "High", "Critical"];
 
-function createHttpError(message, statusCode = 400) {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  return error;
-}
-
 async function analyzeAndCreateComplaint(req, res, next) {
   try {
-    const location = String(req.body.location || "").trim();
-    const textComplaint = String(req.body.textComplaint || "").trim();
-    const imageHint = String(req.body.imageHint || "").trim();
-
-    if (!location) {
-      throw createHttpError("Location is required before submitting a complaint.", 400);
-    }
-
-    if (!textComplaint && !imageHint && !req.body.imageFeatures) {
-      throw createHttpError("Add a complaint description or upload an image before submitting.", 400);
-    }
-
-    const analysis = await analyzeComplaint({
-      textComplaint,
-      voiceTranscript: req.body.voiceTranscript || "",
-      imageHint,
-      imageFeatures: req.body.imageFeatures || null,
-      location,
-      iotTriggered: Boolean(req.body.iotTriggered)
-    });
-
-    const complaint = await Complaint.create({
-      reporter: req.auth.role,
-      reporterUsername: req.auth.username,
-      type: analysis.nlp.issueType,
-      priority: analysis.priority.level,
-      status: analysis.status,
-      source: req.body.inputSource || "Manual Submission",
-      confidence: Math.round((analysis.confidence || Math.max(analysis.priority.score, analysis.cv.score)) * 100),
-      location,
-      assignedAuthority: analysis.assignedAuthority,
-      mapLocation: analysis.mapLocation,
-      description: analysis.unifiedText || "No complaint text provided.",
-      alerts: analysis.alerts,
-      ai: {
-        nlpCategory: analysis.nlp.category,
-        cvDetection: analysis.cv.detected,
-        cvReason: analysis.cv.reason,
-        mlPriorityScore: Number(analysis.priority.score.toFixed(2)),
-        recommendedTeam: analysis.nlp.team
-      }
-    });
+    const { analysis, complaint } = await createComplaintFromPayload(req.auth, req.body);
 
     res.json({
       nlp: analysis.nlp,

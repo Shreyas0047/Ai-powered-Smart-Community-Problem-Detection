@@ -1027,6 +1027,108 @@ async function analyzeComplaint(payload) {
   }
 }
 
+async function processTranscriptWithAi(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+
+  try {
+    const response = await fetch(`${env.aiServiceUrl}/transcript/process`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Transcript processing failed");
+    }
+
+    return data;
+  } catch (_error) {
+    return {
+      transcript: String(payload.transcript || "").trim(),
+      normalizedTranscript: String(payload.transcript || "").trim(),
+      summary: String(payload.transcript || "").trim()
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function detectIntentLocally(message, history = []) {
+  const normalized = normalizeText(message);
+  const recentText = normalizeText(
+    history
+      .slice(-6)
+      .map((item) => item.content)
+      .join(" ")
+  );
+
+  if (/^(hi|hello|hey|good morning|good evening)\b/.test(normalized)) {
+    return {
+      intent: "greeting",
+      response: "Hello. I can help you check complaint status, raise a complaint, answer common questions, and help you navigate the dashboard.",
+      confidence: 0.94
+    };
+  }
+
+  if (/(status|update|track|where is|progress).*(complaint|report)|complaint.*(status|update|progress)/.test(normalized)) {
+    return {
+      intent: "complaint_status",
+      response: "Checking your latest complaint status now.",
+      confidence: 0.9
+    };
+  }
+
+  if (/(raise|report|submit|file|complaint|issue|problem)/.test(normalized) || /need to complain/.test(recentText)) {
+    return {
+      intent: "raise_complaint",
+      response: "Share the complaint details, and I will guide you through creating it here in chat.",
+      confidence: 0.82
+    };
+  }
+
+  return {
+    intent: "fallback",
+    response: "I can help with complaint status, raising a complaint, FAQs, and dashboard navigation.",
+    confidence: 0.4
+  };
+}
+
+async function resolveChatIntent(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+
+  try {
+    const response = await fetch(`${env.aiServiceUrl}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Chat intent resolution failed");
+    }
+
+    return {
+      intent: String(data.intent || "fallback"),
+      response: String(data.response || "").trim(),
+      confidence: Number(data.confidence || 0)
+    };
+  } catch (_error) {
+    return detectIntentLocally(payload.message, payload.history);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function transcribeAudio(payload) {
   if (!env.deepgramApiKey) {
     throw new Error("Speech recognition is not configured. Add DEEPGRAM_API_KEY to the server environment.");
@@ -1100,7 +1202,12 @@ async function transcribeAudio(payload) {
     }
 
     if (response.status === 401 || response.status === 403) {
-      throw new Error("Deepgram rejected the request. Verify DEEPGRAM_API_KEY.");
+      throw new Error(
+        data.err_msg ||
+          data.error ||
+          data.message ||
+          "Deepgram rejected the request. Verify DEEPGRAM_API_KEY."
+      );
     }
 
     if (response.status === 413) {
@@ -1116,8 +1223,17 @@ async function transcribeAudio(payload) {
       data?.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.transcript ||
       "";
 
+    const rawTranscript = String(transcript || "").trim();
+    const processed = await processTranscriptWithAi({
+      transcript: rawTranscript,
+      language: data?.results?.channels?.[0]?.detected_language || "unknown",
+      filename: payload.filename,
+      mimeType
+    });
+
     return {
-      transcript: String(transcript || "").trim(),
+      transcript: String(processed.normalizedTranscript || processed.summary || rawTranscript).trim(),
+      rawTranscript,
       language: data?.results?.channels?.[0]?.detected_language || "unknown",
       provider: "deepgram"
     };
@@ -1128,5 +1244,7 @@ async function transcribeAudio(payload) {
 
 module.exports = {
   analyzeComplaint,
-  transcribeAudio
+  transcribeAudio,
+  processTranscriptWithAi,
+  resolveChatIntent
 };

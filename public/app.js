@@ -93,6 +93,14 @@ let voiceRecordingStartedAt = 0;
 let isVoiceRecording = false;
 let registrationOtpIssued = false;
 
+function emitAuthStateChange() {
+  window.dispatchEvent(
+    new CustomEvent("smart-community:auth-changed", {
+      detail: { authState }
+    })
+  );
+}
+
 const permissionMeta = {
   submit_complaint: { label: "Submit Complaint", target: () => reportFormWorkspace },
   view_personal_updates: { label: "View Personal Updates", target: () => complaintsWorkspace },
@@ -388,6 +396,7 @@ function saveAuthState() {
   } else {
     localStorage.removeItem(storageKey);
   }
+  emitAuthStateChange();
 }
 
 function clearAuthState(message) {
@@ -1563,7 +1572,13 @@ function renderMap(complaints) {
 }
 
 function updateVoiceTranscriptValue(finalText, interimText = "") {
-  voiceTranscriptInput.value = [finalText.trim(), interimText.trim()].filter(Boolean).join(" ").trim();
+  const transcript = [finalText.trim(), interimText.trim()].filter(Boolean).join(" ").trim();
+  voiceTranscriptInput.value = transcript;
+  window.dispatchEvent(
+    new CustomEvent("smart-community:voice-transcript", {
+      detail: { transcript }
+    })
+  );
 }
 
 function extractBase64Payload(dataUrl) {
@@ -2292,6 +2307,13 @@ resetDashboardBtn.addEventListener("click", async () => {
     setDashboardMessage(error.message, "error");
   }
 });
+
+window.smartCommunityApp = {
+  apiRequest,
+  getAuthState: () => authState,
+  getCurrentVoiceTranscript: () => String(voiceTranscriptInput?.value || "").trim(),
+  setDashboardMessage
+};
 
 loadSavedAuthState();
 loadAudioPreference();

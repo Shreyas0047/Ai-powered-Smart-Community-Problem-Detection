@@ -328,6 +328,10 @@ def normalize_text(value):
     return str(value or "").strip().lower()
 
 
+def compact_spaces(value):
+    return " ".join(str(value or "").replace("\n", " ").split()).strip()
+
+
 def clamp01(value):
     return max(0.0, min(1.0, value))
 
@@ -756,6 +760,79 @@ def transcribe():
         return jsonify({"error": str(error)}), 503
     except Exception:
         return jsonify({"error": "Audio transcription failed inside the AI service."}), 500
+
+
+@app.post("/transcript/process")
+def process_transcript():
+    payload = request.get_json(silent=True) or {}
+    transcript = compact_spaces(payload.get("transcript"))
+
+    if not transcript:
+      return jsonify({"error": "Transcript text is required."}), 400
+
+    normalized = transcript[:1].upper() + transcript[1:] if transcript else transcript
+    if normalized and normalized[-1] not in ".!?":
+        normalized = f"{normalized}."
+
+    return jsonify(
+        {
+            "transcript": transcript,
+            "normalizedTranscript": normalized,
+            "summary": normalized,
+            "language": payload.get("language") or "unknown",
+        }
+    )
+
+
+def classify_chat_intent(message, history):
+    normalized = normalize_text(message)
+    recent_text = normalize_text(" ".join(item.get("content", "") for item in history[-6:])) if isinstance(history, list) else ""
+
+    if any(normalized.startswith(greeting) for greeting in ["hi", "hello", "hey", "good morning", "good evening"]):
+        return {
+            "intent": "greeting",
+            "response": "Hello. I can help you check complaint status, raise a complaint, answer common questions, and guide you through the dashboard.",
+            "confidence": 0.96,
+        }
+
+    if ("complaint" in normalized or "report" in normalized) and any(term in normalized for term in ["status", "update", "track", "progress"]):
+        return {
+            "intent": "complaint_status",
+            "response": "Checking your latest complaint status now.",
+            "confidence": 0.92,
+        }
+
+    if any(term in normalized for term in ["raise complaint", "report complaint", "submit complaint", "file complaint", "report issue", "raise issue"]):
+        return {
+            "intent": "raise_complaint",
+            "response": "Share the complaint details, and I will help create it here in chat.",
+            "confidence": 0.9,
+        }
+
+    if any(term in normalized for term in ["complaint", "issue", "problem", "garbage", "water", "road", "fire", "wire", "leak"]) or "raise_complaint" in recent_text:
+        return {
+            "intent": "raise_complaint",
+            "response": "Share the complaint details, and I will help create it here in chat.",
+            "confidence": 0.78,
+        }
+
+    return {
+        "intent": "fallback",
+        "response": "I can help with complaint status, raising a complaint, common questions, and dashboard navigation.",
+        "confidence": 0.42,
+    }
+
+
+@app.post("/chat")
+def chat():
+    payload = request.get_json(silent=True) or {}
+    message = compact_spaces(payload.get("message"))
+
+    if not message:
+        return jsonify({"error": "Message is required."}), 400
+
+    result = classify_chat_intent(message, payload.get("history") or [])
+    return jsonify(result)
 
 
 if __name__ == "__main__":

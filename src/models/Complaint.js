@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const complaintSchema = new mongoose.Schema(
   {
     reporter: { type: String, required: true },
+    reporterUserId: { type: String, default: "" },
     reporterUsername: { type: String, required: true },
     type: { type: String, required: true },
     priority: { type: String, required: true },

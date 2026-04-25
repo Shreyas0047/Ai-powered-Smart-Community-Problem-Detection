@@ -466,8 +466,33 @@
       </footer>
     </div>
 
+    <button type="button" id="chatbotLauncher" class="chatbot-launcher" aria-label="Open assistant" hidden>
+      <span class="chatbot-launcher-core"></span>
+      <span class="chatbot-launcher-ring"></span>
+    </button>
+
+    <section id="chatbotPanel" class="chatbot-panel" hidden aria-label="Community assistant">
+      <header id="chatbotHeader" class="chatbot-header">
+        <div>
+          <strong>Community Assistant</strong>
+          <p id="chatbotStatusText">Ask about status, complaints, FAQs, or navigation.</p>
+        </div>
+        <button type="button" id="chatbotCloseBtn" class="chip-button">Close</button>
+      </header>
+      <div id="chatbotMessages" class="chatbot-messages"></div>
+      <div id="chatbotTyping" class="chatbot-typing" hidden>Bot is typing...</div>
+      <div class="chatbot-actions">
+        <button type="button" id="chatbotUseTranscriptBtn" class="chip-button" disabled>Use voice transcript</button>
+      </div>
+      <form id="chatbotForm" class="chatbot-form">
+        <textarea id="chatbotInput" rows="2" maxlength="1000" placeholder="Type a message"></textarea>
+        <button type="submit" id="chatbotSendBtn" class="light-beam-button">Send</button>
+      </form>
+    </section>
+
     <script type="module" src="/liquid-ether.js"></script>
     <script type="module" src="/audio-transcriber.js"></script>
     <script src="/app.js"></script>
+    <script src="/chatbot.js"></script>
   </body>
 </html>

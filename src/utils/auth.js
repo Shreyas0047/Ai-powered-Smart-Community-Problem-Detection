@@ -4,7 +4,7 @@ const env = require("../config/env");
 const { rolePermissions } = require("../config/roles");
 const tokenIssuer = "ai-smart-community-system";
 
-function issueRoleToken(role, username) {
+function issueRoleToken(role, username, userId = "") {
   const permissions = rolePermissions[role];
   if (!permissions) {
     throw new Error("Unsupported role");
@@ -13,6 +13,7 @@ function issueRoleToken(role, username) {
   return jwt.sign(
     {
       role,
+      userId: String(userId || ""),
       username,
       permissions
     },

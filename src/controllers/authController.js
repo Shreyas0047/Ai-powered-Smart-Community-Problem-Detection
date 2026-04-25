@@ -140,6 +140,7 @@ async function issueToken(req, res, next) {
     res.json({
       token,
       role,
+      userId: "",
       username,
       permissions: rolePermissions[role],
       expiresInSeconds: env.tokenTtlSeconds
@@ -204,7 +205,7 @@ async function register(req, res, next) {
       throw createHttpError("Incorrect OTP. Check the email and try again.", 400);
     }
 
-    await User.create({
+    const user = await User.create({
       username,
       email,
       passwordHash: pendingRegistration.passwordHash,
@@ -212,10 +213,11 @@ async function register(req, res, next) {
     });
     await RegistrationOtp.deleteOne({ _id: pendingRegistration._id });
 
-    const token = issueRoleToken(role, username);
+    const token = issueRoleToken(role, username, user._id);
     res.json({
       token,
       role,
+      userId: String(user._id),
       username,
       permissions: rolePermissions[role],
       expiresInSeconds: env.tokenTtlSeconds
@@ -308,10 +310,11 @@ async function login(req, res, next) {
     }
     clearLoginFailures(req, username);
 
-    const token = issueRoleToken(user.role, user.username);
+    const token = issueRoleToken(user.role, user.username, user._id);
     res.json({
       token,
       role: user.role,
+      userId: String(user._id),
       username: user.username,
       permissions: rolePermissions[user.role],
       expiresInSeconds: env.tokenTtlSeconds
