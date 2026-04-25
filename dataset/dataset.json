@@ -1,0 +1,362 @@
+[
+    {
+        "image":  "plumbing/plumbing_1.jpg",
+        "category":  "plumbing",
+        "issue":  "water leakage",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "https://commons.wikimedia.org/wiki/File%3APointing_at_a_leaking_pipe.jpg"
+    },
+    {
+        "image":  "plumbing/plumbing_2.jpg",
+        "category":  "plumbing",
+        "issue":  "leaking pipe close-up",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "plumbing/plumbing_1.jpg"
+    },
+    {
+        "image":  "plumbing/plumbing_3.jpg",
+        "category":  "plumbing",
+        "issue":  "pipe seepage area",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "plumbing/plumbing_1.jpg"
+    },
+    {
+        "image":  "plumbing/plumbing_4.jpg",
+        "category":  "plumbing",
+        "issue":  "water leakage near wall damage",
+        "severity":  "HIGH",
+        "mixed_case":  true,
+        "secondary_categories":  [
+                                     "maintenance"
+                                 ],
+        "quality":  "normal",
+        "source":  "plumbing/plumbing_1.jpg"
+    },
+    {
+        "image":  "plumbing/plumbing_5.jpg",
+        "category":  "plumbing",
+        "issue":  "leak evidence low-visibility",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "noisy",
+        "source":  "plumbing/plumbing_1.jpg"
+    },
+    {
+        "image":  "electrical/electrical_1.jpg",
+        "category":  "electrical",
+        "issue":  "exposed wires",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "https://commons.wikimedia.org/wiki/File%3AElectric_wires%2C_2020.jpg"
+    },
+    {
+        "image":  "electrical/electrical_2.jpg",
+        "category":  "electrical",
+        "issue":  "power cable hazard",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "electrical/electrical_1.jpg"
+    },
+    {
+        "image":  "electrical/electrical_3.jpg",
+        "category":  "electrical",
+        "issue":  "switchboard wiring issue",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "electrical/electrical_1.jpg"
+    },
+    {
+        "image":  "electrical/electrical_4.jpg",
+        "category":  "electrical",
+        "issue":  "exposed wires near structural wear",
+        "severity":  "HIGH",
+        "mixed_case":  true,
+        "secondary_categories":  [
+                                     "maintenance"
+                                 ],
+        "quality":  "normal",
+        "source":  "electrical/electrical_1.jpg"
+    },
+    {
+        "image":  "electrical/electrical_5.jpg",
+        "category":  "electrical",
+        "issue":  "power issue low-visibility",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "noisy",
+        "source":  "electrical/electrical_1.jpg"
+    },
+    {
+        "image":  "sanitation/sanitation_1.jpg",
+        "category":  "sanitation",
+        "issue":  "overflowing bins",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "https://commons.wikimedia.org/wiki/File%3AOverflowing_rubbish_bin%2C_Zwijndrecht_%282023%29_01.jpg"
+    },
+    {
+        "image":  "sanitation/sanitation_2.jpg",
+        "category":  "sanitation",
+        "issue":  "garbage pile close-up",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "sanitation/sanitation_1.jpg"
+    },
+    {
+        "image":  "sanitation/sanitation_3.jpg",
+        "category":  "sanitation",
+        "issue":  "dirty common area",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "sanitation/sanitation_1.jpg"
+    },
+    {
+        "image":  "sanitation/sanitation_4.jpg",
+        "category":  "sanitation",
+        "issue":  "overflowing bin blocking path",
+        "severity":  "MEDIUM",
+        "mixed_case":  true,
+        "secondary_categories":  [
+                                     "security"
+                                 ],
+        "quality":  "normal",
+        "source":  "sanitation/sanitation_1.jpg"
+    },
+    {
+        "image":  "sanitation/sanitation_5.jpg",
+        "category":  "sanitation",
+        "issue":  "overflowing bin low-visibility",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "noisy",
+        "source":  "sanitation/sanitation_1.jpg"
+    },
+    {
+        "image":  "maintenance/maintenance_1.jpg",
+        "category":  "maintenance",
+        "issue":  "damaged walls",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "https://commons.wikimedia.org/wiki/File%3ACracked_wall.jpg"
+    },
+    {
+        "image":  "maintenance/maintenance_2.jpg",
+        "category":  "maintenance",
+        "issue":  "wall cracks close-up",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "maintenance/maintenance_1.jpg"
+    },
+    {
+        "image":  "maintenance/maintenance_3.jpg",
+        "category":  "maintenance",
+        "issue":  "masonry deterioration",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "maintenance/maintenance_1.jpg"
+    },
+    {
+        "image":  "maintenance/maintenance_4.jpg",
+        "category":  "maintenance",
+        "issue":  "cracked wall near leakage zone",
+        "severity":  "MEDIUM",
+        "mixed_case":  true,
+        "secondary_categories":  [
+                                     "plumbing"
+                                 ],
+        "quality":  "normal",
+        "source":  "maintenance/maintenance_1.jpg"
+    },
+    {
+        "image":  "maintenance/maintenance_5.jpg",
+        "category":  "maintenance",
+        "issue":  "damaged wall low-visibility",
+        "severity":  "LOW",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "noisy",
+        "source":  "maintenance/maintenance_1.jpg"
+    },
+    {
+        "image":  "security/security_1.jpg",
+        "category":  "security",
+        "issue":  "open gates",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "https://commons.wikimedia.org/wiki/File%3AOpen_gate_%2819565073671%29.jpg"
+    },
+    {
+        "image":  "security/security_2.jpg",
+        "category":  "security",
+        "issue":  "open gate detail",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "security/security_1.jpg"
+    },
+    {
+        "image":  "security/security_3.jpg",
+        "category":  "security",
+        "issue":  "unsecured entryway",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "security/security_1.jpg"
+    },
+    {
+        "image":  "security/security_4.jpg",
+        "category":  "security",
+        "issue":  "open gate near access congestion",
+        "severity":  "MEDIUM",
+        "mixed_case":  true,
+        "secondary_categories":  [
+                                     "infrastructure"
+                                 ],
+        "quality":  "normal",
+        "source":  "security/security_1.jpg"
+    },
+    {
+        "image":  "security/security_5.jpg",
+        "category":  "security",
+        "issue":  "open gate low-visibility",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "noisy",
+        "source":  "security/security_1.jpg"
+    },
+    {
+        "image":  "infrastructure/infrastructure_1.jpg",
+        "category":  "infrastructure",
+        "issue":  "potholes",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "https://commons.wikimedia.org/wiki/File%3ARoad_pothole.jpg"
+    },
+    {
+        "image":  "infrastructure/infrastructure_2.jpg",
+        "category":  "infrastructure",
+        "issue":  "pothole close-up",
+        "severity":  "HIGH",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "infrastructure/infrastructure_1.jpg"
+    },
+    {
+        "image":  "infrastructure/infrastructure_3.jpg",
+        "category":  "infrastructure",
+        "issue":  "damaged road surface",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "normal",
+        "source":  "infrastructure/infrastructure_1.jpg"
+    },
+    {
+        "image":  "infrastructure/infrastructure_4.jpg",
+        "category":  "infrastructure",
+        "issue":  "water pooling in pothole",
+        "severity":  "HIGH",
+        "mixed_case":  true,
+        "secondary_categories":  [
+                                     "plumbing"
+                                 ],
+        "quality":  "normal",
+        "source":  "infrastructure/infrastructure_1.jpg"
+    },
+    {
+        "image":  "infrastructure/infrastructure_5.jpg",
+        "category":  "infrastructure",
+        "issue":  "pothole low-visibility",
+        "severity":  "MEDIUM",
+        "mixed_case":  false,
+        "secondary_categories":  [
+
+                                 ],
+        "quality":  "noisy",
+        "source":  "infrastructure/infrastructure_1.jpg"
+    }
+]
