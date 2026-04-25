@@ -1,35 +1,72 @@
-# AI Smart Community Problem Detection System
+# Urban Pulse Ai
 
-This project now follows the architecture you described:
+Urban Pulse Ai is an AI-powered smart community complaint detection and escalation system.
 
-- `Flask` AI microservice for text and image analysis
-- `Node.js + Express` API for authentication, complaints, dashboard access, payments, and complaint status workflows
-- `MongoDB Atlas` for complaint, payment, pending order, and user storage
-- `Razorpay` for secure online maintenance payments with automatic receipt creation
-- `SMTP email sending` for automatic BBMP complaint forwarding with PDF attachment
-- `Deepgram Speech-to-Text API` for live voice complaint transcription
+Current stack:
 
-## Architecture
+- `Node.js + Express` for the main web app, auth, complaint APIs, dashboard, payments, and email
+- `Flask` AI microservice for complaint understanding, transcript post-processing, and chatbot intent handling
+- `MongoDB Atlas` for users, complaints, chat sessions, payments, and pending OTP registrations
+- `Deepgram` for speech-to-text
+- `Razorpay` for maintenance payments
+- `SMTP` for OTP and BBMP email delivery
+
+## Core Features
+
+- text, image, and voice complaint submission
+- Deepgram-based live voice transcription
+- AI-assisted complaint categorization, sentiment, severity, and priority analysis
+- chatbot with complaint status lookup, complaint creation assistance, FAQ help, and navigation help
+- PDF complaint report generation
+- BBMP email forwarding with attachment
+- Admin dashboard for alerts, status updates, resets, and account management
+
+## Project Structure
 
 - `public/`
-  Frontend dashboard, complaint form, JWT role UI, complaint status updates, alerts, sensors, and map UI
+  Frontend dashboard, complaint form, chatbot UI, and static assets
 - `src/`
   Express backend with routes, controllers, models, middleware, and services
 - `ai_service/`
-  Flask microservice that analyzes complaint text, image-derived features, and uploaded audio transcription
+  Flask AI service for `/analyze`, `/transcript/process`, `/chat`, and `/health`
 - `receipts/`
-  Auto-generated maintenance payment receipts after successful Razorpay verification
+  Generated payment receipts
 
-## Backend Stack
+## Current AI Flow
 
-- `Express API`
-  Handles JWT role tokens, complaint submission, dashboard data, payment order creation, payment verification, and static serving
-- `Flask AI service`
-  Exposes `/analyze` and `/health` endpoints for NLP and CV-style inference
-- `MongoDB Atlas`
-  Stores complaints, verified payments, pending Razorpay orders, and users through Mongoose models
+Complaint flow:
 
-## Environment Setup
+1. Frontend collects text, image-derived hints/features, and optional voice transcript
+2. Express enriches the request with prior complaints from the same user and recent complaints in the same area
+3. Flask runs a hybrid AI pipeline:
+   - preprocessing and normalization
+   - semantic similarity using `sentence-transformers`
+   - keyword extraction with n-gram support
+   - multi-label category scoring
+   - sentiment and severity analysis
+   - context-aware repeat complaint analysis
+   - image-text fusion
+   - explainable priority reasoning
+4. Express stores the result in MongoDB
+
+Voice flow:
+
+1. Frontend records audio
+2. Express sends audio to Deepgram
+3. Deepgram returns transcript text
+4. Express sends transcript to Flask `/transcript/process`
+5. Flask normalizes the transcript
+6. Frontend fills the voice complaint summary box
+
+Chatbot flow:
+
+1. Frontend sends user message and userId to Express
+2. Express forwards the message/history to Flask `/chat`
+3. Flask returns intent + response suggestion
+4. Express resolves complaint status or complaint creation when needed
+5. Frontend renders chat history and assistant messages
+
+## Environment Variables
 
 Create a `.env` file from `.env.example` and set:
 
@@ -49,6 +86,19 @@ SMTP_USER=your_email@example.com
 SMTP_PASS=your_app_password
 SMTP_FROM=your_email@example.com
 BBMP_EMAIL_TO=comm@bbmp.gov.in
+CORS_ORIGIN=http://localhost:3000
+ALLOW_ROLE_TOKEN_ISSUE=false
+```
+
+Flask AI environment variables:
+
+```bash
+EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+VISION_IMAGE_WEIGHT=0.38
+TEXT_CONFIDENCE_THRESHOLD=0.26
+CONTEXT_REPEAT_HIGH=5
+CONTEXT_REPEAT_MEDIUM=3
+MAX_EXPLANATION_KEYWORDS=4
 ```
 
 ## Install
@@ -65,77 +115,94 @@ Python dependencies:
 pip install -r ai_service/requirements.txt
 ```
 
-Note:
-- Voice complaint recording is sent from the browser to the Node backend and then forwarded to Deepgram for transcription.
-- If Deepgram is unavailable, the app falls back to browser-side transcription when available.
-
-Seed MongoDB Atlas with demo complaints and users:
+Seed demo data:
 
 ```bash
 npm run seed
 ```
 
-To wipe and reseed:
+Wipe and reseed:
 
 ```bash
 npm run seed:fresh
 ```
 
-## Run
+## Run Locally
 
-Start the Flask AI microservice:
+Start the Flask AI service:
 
 ```bash
 npm run start:ai
 ```
 
-Start the Express API:
+Start the Express app:
 
 ```bash
 npm start
 ```
 
-Then open:
+Open:
 
 ```bash
 http://localhost:3000
 ```
 
-## Deploy As A Web App
+## Deploy
 
-The simplest production setup for this project is:
+Recommended production layout:
 
 - `MongoDB Atlas` for the database
-- `Render web service` for the Node.js web app
-- `Optional Render web service` for the Flask AI microservice
-- `Deepgram API` for speech-to-text
+- `Render` Node web service for the main app
+- `Render` Python web service for the Flask AI service
+- `Deepgram` for STT
 
-Users should open the deployed `Node.js` service URL. The frontend is served by Express, so the app will be accessible from phones, tablets, and laptops through that single public URL.
+### 1. Deploy the Flask AI Service on Render
 
-### 1. Prepare MongoDB Atlas
+Create a Python web service with:
 
-- Create a cluster
-- Create a database user
-- Add a network access rule for your deployment
-- Copy your `MONGODB_URI`
+- Root Directory: `ai_service`
+- Build Command:
 
-### 2. Deploy The Flask AI Service
+```bash
+pip install -r requirements.txt
+```
 
-Create a new `Python` web service on Render with:
+- Start Command:
 
-- Root directory: `ai_service`
-- Build command: `pip install -r requirements.txt`
-- Start command: `gunicorn app:app`
+```bash
+gunicorn app:app
+```
 
-### 3. Deploy The Node.js Web App
+Recommended Render env vars:
 
-Create a new `Node` web service on Render with:
+```bash
+PYTHON_VERSION=3.11.11
+EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+VISION_IMAGE_WEIGHT=0.38
+TEXT_CONFIDENCE_THRESHOLD=0.26
+CONTEXT_REPEAT_HIGH=5
+CONTEXT_REPEAT_MEDIUM=3
+MAX_EXPLANATION_KEYWORDS=4
+```
 
-- Root directory: project root
-- Build command: `npm install`
-- Start command: `npm start`
+### 2. Deploy the Node App on Render
 
-Set these environment variables on the `Node` service:
+Create a Node web service with:
+
+- Root Directory: project root
+- Build Command:
+
+```bash
+npm install
+```
+
+- Start Command:
+
+```bash
+npm start
+```
+
+Recommended Node env vars:
 
 ```bash
 MONGODB_URI=your_atlas_uri
@@ -154,35 +221,60 @@ CORS_ORIGIN=https://your-node-service.onrender.com
 ALLOW_ROLE_TOKEN_ISSUE=false
 ```
 
-Notes:
+### 3. Important Deployment Notes
 
-- Do not set `PORT` manually on Render. Render provides it automatically.
-- If you want demo data in production, run `npm run seed` once against your Atlas database before or after deploy.
-- If you use Gmail SMTP, use an app password instead of your normal Gmail password.
-- If `AI_SERVICE_URL` is not set to a live service, complaint analysis falls back to the built-in Node analyzer.
-- Speech transcription uses Deepgram directly from the Node backend, so you do not need a second speech service deployment.
+- Deploy the Flask AI service first, then the Node service
+- Re-login after deployment because JWT payloads now include `userId`
+- Do not set `PORT` manually on Render
+- Use `Clear build cache & deploy` on the Flask service when Python dependencies change
+- Speech-to-text is handled by Deepgram from the Node service, not by Flask
 
-## Key Files
+## Main API Surface
+
+Express:
+
+- `/api/auth/register/request-otp`
+- `/api/auth/register`
+- `/api/auth/login`
+- `/api/dashboard`
+- `/api/analyze-complaint`
+- `/api/transcribe-audio`
+- `/api/chatbot/history`
+- `/api/chatbot/message`
+- `/api/email-bbmp`
+
+Flask:
+
+- `/health`
+- `/analyze`
+- `/transcript/process`
+- `/chat`
+
+## Important Files
 
 - `src/server.js`
-  Express bootstrap and MongoDB Atlas connection startup
+  Express bootstrap and MongoDB startup
 - `src/routes/api.js`
-  API routes for auth, dashboard, complaints, BBMP email sending, payments, and complaint status updates
+  Main API routing
 - `src/controllers/complaintController.js`
-  Sends complaint data to the Flask AI microservice, stores the result in MongoDB, and updates complaint statuses
-- `src/controllers/paymentController.js`
-  Creates Razorpay orders, verifies signatures, and saves receipts
-- `src/controllers/emailController.js`
-  Sends the formal complaint report PDF to BBMP through SMTP
+  Complaint submission and transcription endpoints
+- `src/controllers/chatbotController.js`
+  Chat history, chat actions, and complaint creation through chat
+- `src/services/complaintService.js`
+  Shared complaint creation pipeline used by form and chatbot
+- `src/services/aiClient.js`
+  Node -> Flask and Node -> Deepgram integration
 - `ai_service/app.py`
-  Flask microservice for complaint text and image analysis
+  Flask entrypoint
+- `ai_service/pipeline.py`
+  Hybrid complaint analysis pipeline
+- `public/chatbot.js`
+  Floating chatbot UI
 
 ## Notes
 
-- The frontend contract was kept largely consistent, so the UI still works through `/api/*` routes.
-- The AI stack is now fully local-only: Flask handles the main multimodal analysis and Express keeps an improved built-in fallback analyzer if Flask is unavailable.
-- The local detector now uses richer text, image-feature, and location fusion rather than simple one-rule matching, so accuracy is improved without any paid API dependency.
-- MongoDB Atlas is required for the new backend to start.
-- The current role model is `Admin` and `Citizen`.
-- Admins can update complaint statuses, manage alerts, reset dashboard data, and delete accounts through the dashboard.
-- Automatic BBMP email sending requires SMTP credentials in `.env`.
+- The frontend is served by Express; there is no separate frontend deployment requirement.
+- Complaint analysis still has a Node-side fallback path if Flask is unavailable, but the primary path is Flask.
+- Chatbot history is stored per user in MongoDB.
+- OTP verification is required only for registration, not login.
+- SMTP sends both OTP messages and BBMP complaint emails.
