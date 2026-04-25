@@ -21,13 +21,40 @@ async function createComplaintFromPayload(auth, payload) {
     throw createHttpError("Add a complaint description, voice transcript, or upload an image before submitting.", 400);
   }
 
+  const previousComplaintFilter = auth.userId
+    ? { reporterUserId: String(auth.userId || "") }
+    : { reporterUsername: auth.username };
+  const recentAreaFilter = location ? { location: new RegExp(location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") } : {};
+  const [previousComplaints, recentAreaComplaints] = await Promise.all([
+    Complaint.find(previousComplaintFilter).sort({ createdAt: -1 }).limit(5).lean(),
+    location
+      ? Complaint.find(recentAreaFilter).sort({ createdAt: -1 }).limit(8).lean()
+      : Promise.resolve([])
+  ]);
+
   const analysis = await analyzeComplaint({
     textComplaint,
     voiceTranscript,
     imageHint,
     imageFeatures: payload.imageFeatures || null,
     location,
-    iotTriggered: Boolean(payload.iotTriggered)
+    iotTriggered: Boolean(payload.iotTriggered),
+    previousComplaints: previousComplaints.map((complaint) => ({
+      type: complaint.type,
+      description: complaint.description,
+      location: complaint.location,
+      priority: complaint.priority,
+      status: complaint.status,
+      createdAt: complaint.createdAt
+    })),
+    recentAreaComplaints: recentAreaComplaints.map((complaint) => ({
+      type: complaint.type,
+      description: complaint.description,
+      location: complaint.location,
+      priority: complaint.priority,
+      status: complaint.status,
+      createdAt: complaint.createdAt
+    }))
   });
 
   const complaint = await Complaint.create({

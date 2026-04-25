@@ -161,16 +161,20 @@
       return;
     }
 
-    if (!isOpen) {
-      await loadHistory();
-      openPanel();
+    if (isOpen) {
+      input.focus();
       return;
     }
 
-    closePanel();
+    await loadHistory();
+    openPanel();
   });
 
-  closeBtn.addEventListener("click", closePanel);
+  closeBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closePanel();
+  });
 
   launcher.addEventListener("pointerdown", (event) => {
     dragState = {
