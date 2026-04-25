@@ -184,6 +184,34 @@ async function getChatHistory(req, res, next) {
   }
 }
 
+async function clearChatHistory(req, res, next) {
+  try {
+    const userId = getUserKey(req.auth, req.body.userId || req.query.userId);
+    const session = await getOrCreateSession(req.auth, userId);
+
+    session.messages = [];
+    session.lastTranscript = "";
+    session.pendingAction = {
+      stage: "",
+      draftComplaint: {
+        description: "",
+        location: "",
+        voiceTranscript: ""
+      }
+    };
+
+    await session.save();
+
+    res.json({
+      message: "Chat history cleared.",
+      messages: [],
+      pendingAction: session.pendingAction || null
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function postChatMessage(req, res, next) {
   try {
     const userId = getUserKey(req.auth, req.body.userId);
@@ -254,5 +282,6 @@ async function postChatMessage(req, res, next) {
 
 module.exports = {
   getChatHistory,
-  postChatMessage
+  postChatMessage,
+  clearChatHistory
 };

@@ -2,7 +2,7 @@
   const launcher = document.getElementById("chatbotLauncher");
   const panel = document.getElementById("chatbotPanel");
   const header = document.getElementById("chatbotHeader");
-  const closeBtn = document.getElementById("chatbotCloseBtn");
+  const clearBtn = document.getElementById("chatbotClearBtn");
   const messagesRoot = document.getElementById("chatbotMessages");
   const typingRoot = document.getElementById("chatbotTyping");
   const form = document.getElementById("chatbotForm");
@@ -19,8 +19,10 @@
     x: window.innerWidth - 104,
     y: window.innerHeight - 108
   };
+  const animationDurationMs = 220;
 
   let isOpen = false;
+  let isAnimating = false;
   let dragState = null;
   let historyLoadedForUser = "";
 
@@ -101,6 +103,7 @@
 
     if (!auth?.token || !auth?.userId) {
       launcher.hidden = true;
+      panel.classList.remove("is-open");
       panel.hidden = true;
       isOpen = false;
       historyLoadedForUser = "";
@@ -142,17 +145,52 @@
     });
   }
 
+  async function clearHistory() {
+    const auth = getAuthState();
+    if (!auth?.token || !auth?.userId) {
+      throw new Error("Login is required before clearing chat history.");
+    }
+
+    return getApp().apiRequest("/api/chatbot/history", {
+      method: "DELETE",
+      body: JSON.stringify({
+        userId: auth.userId
+      })
+    });
+  }
+
   function openPanel() {
+    if (isAnimating || isOpen) {
+      return;
+    }
+
+    isAnimating = true;
     isOpen = true;
     panel.hidden = false;
     updatePanelPosition();
     updateTranscriptButton();
-    input.focus();
+
+    requestAnimationFrame(() => {
+      panel.classList.add("is-open");
+      window.setTimeout(() => {
+        isAnimating = false;
+        input.focus();
+      }, animationDurationMs);
+    });
   }
 
   function closePanel() {
+    if (isAnimating || !isOpen) {
+      return;
+    }
+
+    isAnimating = true;
     isOpen = false;
-    panel.hidden = true;
+    panel.classList.remove("is-open");
+    window.setTimeout(() => {
+      panel.hidden = true;
+      isAnimating = false;
+    }, animationDurationMs);
   }
 
   launcher.addEventListener("click", async (event) => {
@@ -162,7 +200,7 @@
     }
 
     if (isOpen) {
-      input.focus();
+      closePanel();
       return;
     }
 
@@ -170,10 +208,21 @@
     openPanel();
   });
 
-  closeBtn.addEventListener("click", (event) => {
+  clearBtn.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
-    closePanel();
+
+    try {
+      clearBtn.disabled = true;
+      const result = await clearHistory();
+      renderMessages(result.messages || []);
+      statusText.textContent = "Chat history cleared.";
+      setDashboardMessage("Chat history cleared.", "success");
+    } catch (error) {
+      statusText.textContent = error.message || "Could not clear chat history.";
+    } finally {
+      clearBtn.disabled = false;
+    }
   });
 
   launcher.addEventListener("pointerdown", (event) => {
