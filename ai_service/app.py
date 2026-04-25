@@ -3,7 +3,10 @@ from flask_cors import CORS
 
 from chat_logic import classify_chat_intent
 from pipeline import run_hybrid_pipeline
-from transcription import compact_spaces, transcribe_audio_payload
+
+
+def compact_spaces(value):
+    return " ".join(str(value or "").replace("\n", " ").split()).strip()
 
 app = Flask(__name__)
 CORS(app)
@@ -18,21 +21,6 @@ def health():
 def analyze():
     payload = request.get_json(silent=True) or {}
     return jsonify(run_hybrid_pipeline(payload))
-
-
-@app.post("/transcribe")
-def transcribe():
-    payload = request.get_json(silent=True) or {}
-
-    try:
-        result = transcribe_audio_payload(payload)
-        return jsonify(result)
-    except ValueError as error:
-        return jsonify({"error": str(error)}), 400
-    except RuntimeError as error:
-        return jsonify({"error": str(error)}), 503
-    except Exception:
-        return jsonify({"error": "Audio transcription failed inside the AI service."}), 500
 
 
 @app.post("/transcript/process")
