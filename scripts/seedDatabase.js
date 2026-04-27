@@ -1,7 +1,5 @@
 const { connectDatabase } = require("../src/config/db");
 const Complaint = require("../src/models/Complaint");
-const Payment = require("../src/models/Payment");
-const PaymentOrder = require("../src/models/PaymentOrder");
 const User = require("../src/models/User");
 const { seedAll } = require("../src/services/seedService");
 const { hashPassword } = require("../src/utils/auth");
@@ -12,8 +10,6 @@ async function run() {
   if (process.argv.includes("--fresh")) {
     await Promise.all([
       Complaint.deleteMany({}),
-      Payment.deleteMany({}),
-      PaymentOrder.deleteMany({}),
       User.deleteMany({})
     ]);
   }

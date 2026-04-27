@@ -1775,11 +1775,11 @@ async function startVoiceRecording() {
       }
     });
 
-    voiceMediaRecorder.addEventListener("stop", async () => {
-      const finalMimeType = voiceMediaRecorder?.mimeType || mimeType || "audio/webm";
-      const blob = new Blob(voiceRecordingChunks, { type: finalMimeType });
-      const durationSeconds = voiceRecordingStartedAt
-        ? Math.max(1, Math.round((Date.now() - voiceRecordingStartedAt) / 1000))
+      voiceMediaRecorder.addEventListener("stop", async () => {
+        const finalMimeType = voiceMediaRecorder?.mimeType || mimeType || "audio/webm";
+        const blob = new Blob(voiceRecordingChunks, { type: finalMimeType });
+        const durationSeconds = voiceRecordingStartedAt
+          ? Math.max(1, Math.round((Date.now() - voiceRecordingStartedAt) / 1000))
         : null;
 
       isVoiceRecording = false;
@@ -1803,37 +1803,57 @@ async function startVoiceRecording() {
         filename,
         mimeType: finalMimeType,
         dataUrl: await readFileAsDataUrl(recordingFile)
-      };
-      voiceAudioMeta.textContent = `${filename} - ${durationSeconds || 1}s - ${Math.max(1, Math.round(blob.size / 1024))} KB`;
-      voiceTranscriptStatus.textContent = "Recording captured. Transcribing now...";
+        };
+        voiceAudioMeta.textContent = `${filename} - ${durationSeconds || 1}s - ${Math.max(1, Math.round(blob.size / 1024))} KB`;
+        voiceTranscriptStatus.textContent = "Recording captured. Transcribing now...";
+        updateVoiceRecordingUi();
+        window.dispatchEvent(
+          new CustomEvent("smart-community:voice-state", {
+            detail: { state: "processing" }
+          })
+        );
+        await transcribeVoiceAudio(recordingFile);
+      });
+
+      voiceRecordingStartedAt = Date.now();
+      isVoiceRecording = true;
       updateVoiceRecordingUi();
-      await transcribeVoiceAudio(recordingFile);
-    });
-
-    voiceRecordingStartedAt = Date.now();
-    isVoiceRecording = true;
-    updateVoiceRecordingUi();
-    voiceMediaRecorder.start();
-    voiceTranscriptStatus.textContent = "Recording in progress. Speak your complaint, then press Stop Recording.";
-  } catch (error) {
-    isVoiceRecording = false;
-    stopVoiceRecorderStream();
-    updateVoiceRecordingUi();
-    voiceTranscriptStatus.textContent =
-      error?.name === "NotAllowedError"
-        ? "Microphone access is blocked. Allow microphone access and try recording again."
-        : error?.message || "Unable to start live recording. Check microphone access and try again.";
+      window.dispatchEvent(
+        new CustomEvent("smart-community:voice-state", {
+          detail: { state: "listening" }
+        })
+      );
+      voiceMediaRecorder.start();
+      voiceTranscriptStatus.textContent = "Recording in progress. Speak your complaint, then press Stop Recording.";
+    } catch (error) {
+      isVoiceRecording = false;
+      stopVoiceRecorderStream();
+      updateVoiceRecordingUi();
+      window.dispatchEvent(
+        new CustomEvent("smart-community:voice-state", {
+          detail: { state: "error", message: error?.message || "Unable to start live recording." }
+        })
+      );
+      voiceTranscriptStatus.textContent =
+        error?.name === "NotAllowedError"
+          ? "Microphone access is blocked. Allow microphone access and try recording again."
+          : error?.message || "Unable to start live recording. Check microphone access and try again.";
   }
 }
 
-function stopVoiceRecording() {
-  if (!voiceMediaRecorder || voiceMediaRecorder.state === "inactive") {
-    return;
-  }
+  function stopVoiceRecording() {
+    if (!voiceMediaRecorder || voiceMediaRecorder.state === "inactive") {
+      return;
+    }
 
-  voiceTranscriptStatus.textContent = "Stopping recording and preparing transcription...";
-  voiceMediaRecorder.stop();
-}
+    voiceTranscriptStatus.textContent = "Stopping recording and preparing transcription...";
+    window.dispatchEvent(
+      new CustomEvent("smart-community:voice-state", {
+        detail: { state: "processing" }
+      })
+    );
+    voiceMediaRecorder.stop();
+  }
 
 function setComplaintInputMode(mode) {
   const isVoiceMode = mode === "voice";

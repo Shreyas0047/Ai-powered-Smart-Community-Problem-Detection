@@ -26,8 +26,7 @@
     "dashboard",
     "express",
     "flask",
-    "mongodb-atlas",
-    "razorpay"
+    "mongodb-atlas"
   ],
   "license": "MIT"
 }

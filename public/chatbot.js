@@ -26,6 +26,19 @@
   let dragState = null;
   let historyLoadedForUser = "";
 
+  function emitBotState(state, extraDetail = {}) {
+    launcher.dataset.botState = state;
+    window.dispatchEvent(
+      new CustomEvent("smart-community:chatbot-state", {
+        detail: {
+          state,
+          isOpen,
+          ...extraDetail
+        }
+      })
+    );
+  }
+
   function getApp() {
     return window.smartCommunityApp || null;
   }
@@ -92,6 +105,7 @@
     sendBtn.disabled = isLoading;
     input.disabled = isLoading;
     setTyping(isLoading);
+    emitBotState(isLoading ? "talking" : isOpen ? "open" : "idle");
   }
 
   function updateTranscriptButton() {
@@ -107,6 +121,8 @@
       panel.hidden = true;
       isOpen = false;
       historyLoadedForUser = "";
+      launcher.setAttribute("aria-expanded", "false");
+      emitBotState("idle", { reason: "logged_out" });
       return;
     }
 
@@ -166,6 +182,7 @@
 
     isAnimating = true;
     isOpen = true;
+    launcher.setAttribute("aria-expanded", "true");
     panel.hidden = false;
     updatePanelPosition();
     updateTranscriptButton();
@@ -174,6 +191,7 @@
       panel.classList.add("is-open");
       window.setTimeout(() => {
         isAnimating = false;
+        emitBotState("open");
         input.focus();
       }, animationDurationMs);
     });
@@ -186,10 +204,12 @@
 
     isAnimating = true;
     isOpen = false;
+    launcher.setAttribute("aria-expanded", "false");
     panel.classList.remove("is-open");
     window.setTimeout(() => {
       panel.hidden = true;
       isAnimating = false;
+      emitBotState("idle");
     }, animationDurationMs);
   }
 
@@ -218,8 +238,10 @@
       renderMessages(result.messages || []);
       statusText.textContent = "Chat history cleared.";
       setDashboardMessage("Chat history cleared.", "success");
+      emitBotState("open", { cleared: true });
     } catch (error) {
       statusText.textContent = error.message || "Could not clear chat history.";
+      emitBotState("error", { message: error.message || "Could not clear chat history." });
     } finally {
       clearBtn.disabled = false;
     }
@@ -290,9 +312,13 @@
       if (result.meta?.complaintCreated) {
         setDashboardMessage("Complaint created from chatbot.", "success");
       }
+      emitBotState("talking", { intent: result.intent || "fallback" });
+      window.setTimeout(() => emitBotState(isOpen ? "open" : "idle"), 900);
     } catch (error) {
       renderMessage({ sender: "bot", content: error.message || "The assistant could not respond right now." });
       statusText.textContent = error.message || "The assistant could not respond right now.";
+      emitBotState("error", { message: error.message || "The assistant could not respond right now." });
+      window.setTimeout(() => emitBotState(isOpen ? "open" : "idle"), 900);
     } finally {
       setLoading(false);
     }
@@ -309,4 +335,5 @@
   updateLauncherPosition();
   updateTranscriptButton();
   loadHistory().catch(() => {});
+  emitBotState("idle");
 })();

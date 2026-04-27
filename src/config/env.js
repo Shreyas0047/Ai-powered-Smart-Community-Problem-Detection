@@ -17,8 +17,6 @@ module.exports = {
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
   twilioFromNumber: process.env.TWILIO_FROM_NUMBER || "",
   allowDemoOtp: process.env.ALLOW_DEMO_OTP === "true",
-  razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
-  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
   smtpHost: process.env.SMTP_HOST || "",
   smtpPort: Number(process.env.SMTP_PORT || 587),
   smtpSecure: process.env.SMTP_SECURE === "true",

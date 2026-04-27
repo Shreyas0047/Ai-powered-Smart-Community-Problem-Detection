@@ -4,11 +4,10 @@ Urban Pulse Ai is an AI-powered smart community complaint detection and escalati
 
 Current stack:
 
-- `Node.js + Express` for the main web app, auth, complaint APIs, dashboard, payments, and email
+- `Node.js + Express` for the main web app, auth, complaint APIs, dashboard, and email
 - `Flask` AI microservice for complaint understanding, transcript post-processing, and chatbot intent handling
-- `MongoDB Atlas` for users, complaints, chat sessions, payments, and pending OTP registrations
+- `MongoDB Atlas` for users, complaints, chat sessions, and pending OTP registrations
 - `Deepgram` for speech-to-text
-- `Razorpay` for maintenance payments
 - `SMTP` for OTP and BBMP email delivery
 
 ## Core Features
@@ -17,6 +16,7 @@ Current stack:
 - Deepgram-based live voice transcription
 - AI-assisted complaint categorization, sentiment, severity, and priority analysis
 - chatbot with complaint status lookup, complaint creation assistance, FAQ help, and navigation help
+- theme-matched floating AI helper bot with context-aware tips and voice/chat state animations
 - PDF complaint report generation
 - BBMP email forwarding with attachment
 - Admin dashboard for alerts, status updates, resets, and account management
@@ -29,8 +29,6 @@ Current stack:
   Express backend with routes, controllers, models, middleware, and services
 - `ai_service/`
   Flask AI service for `/analyze`, `/transcript/process`, `/chat`, and `/health`
-- `receipts/`
-  Generated payment receipts
 
 ## Current AI Flow
 
@@ -77,8 +75,6 @@ JWT_SECRET=replace-with-a-strong-secret
 AI_SERVICE_URL=http://127.0.0.1:5000
 DEEPGRAM_API_KEY=your_deepgram_api_key
 DEEPGRAM_MODEL=nova-3
-RAZORPAY_KEY_ID=rzp_test_xxxxx
-RAZORPAY_KEY_SECRET=xxxxxxxx
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -258,6 +254,10 @@ Flask:
   Main API routing
 - `src/controllers/complaintController.js`
   Complaint submission and transcription endpoints
+- `public/chatbot.js`
+  Chatbot panel behavior and state events
+- `public/ai-helper-bot.js`
+  Theme-aware assistant robot behavior and contextual UI tips
 - `src/controllers/chatbotController.js`
   Chat history, chat actions, and complaint creation through chat
 - `src/services/complaintService.js`

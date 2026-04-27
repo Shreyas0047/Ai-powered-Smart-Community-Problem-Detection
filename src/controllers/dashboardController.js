@@ -1,8 +1,5 @@
 const Complaint = require("../models/Complaint");
-const Payment = require("../models/Payment");
-const PaymentOrder = require("../models/PaymentOrder");
 const User = require("../models/User");
-const { isRazorpayConfigured } = require("../services/razorpayService");
 
 const iotReadings = [
   { sensor: "Gas Sensor", zone: "Community Kitchen", value: 74, unit: "ppm", status: "Warning" },
@@ -26,11 +23,9 @@ async function getDashboard(req, res, next) {
     const canViewSensors = req.auth.permissions.includes("view_sensors");
     const canDeleteUsers = req.auth.permissions.includes("delete_users");
     const complaintFilter = canViewDashboard ? {} : { reporterUsername: req.auth.username };
-    const paymentFilter = canViewDashboard ? {} : { role: req.auth.role };
 
-    const [complaints, payments, users] = await Promise.all([
+    const [complaints, users] = await Promise.all([
       Complaint.find(complaintFilter).sort({ createdAt: -1 }).lean(),
-      Payment.find(paymentFilter).sort({ verifiedAt: -1 }).lean(),
       canDeleteUsers
         ? User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ role: 1, username: 1 }).lean()
         : Promise.resolve([])
@@ -48,14 +43,6 @@ async function getDashboard(req, res, next) {
       },
       complaints,
       iotReadings: canViewSensors ? iotReadings : [],
-      payments: {
-        payments,
-        stats: {
-          totalPayments: payments.length,
-          totalAmountInRupees: payments.reduce((sum, item) => sum + item.amount / 100, 0).toFixed(2)
-        },
-        razorpayConfigured: isRazorpayConfigured()
-      },
       manageableUsers: users,
       auth: {
         role: req.auth.role,
@@ -70,11 +57,7 @@ async function getDashboard(req, res, next) {
 
 async function resetDashboard(req, res, next) {
   try {
-    await Promise.all([
-      Complaint.deleteMany({}),
-      Payment.deleteMany({}),
-      PaymentOrder.deleteMany({})
-    ]);
+    await Complaint.deleteMany({});
     await getDashboard(req, res, next);
   } catch (error) {
     next(error);
