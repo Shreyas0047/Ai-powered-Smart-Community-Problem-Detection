@@ -465,34 +465,9 @@
       </footer>
     </div>
 
-    <button
-      type="button"
-      id="chatbotLauncher"
-      class="chatbot-launcher ai-helper-bot"
-      aria-label="Open assistant"
-      aria-expanded="false"
-      data-bot-state="idle"
-      hidden
-    >
-      <span class="ai-helper-tooltip" id="aiHelperTooltip">Hi! Need help?</span>
-      <span class="ai-helper-context-tip" id="aiHelperContextTip">Check your complaint status here</span>
-      <span class="ai-helper-shell">
-        <span class="ai-helper-antenna"></span>
-        <span class="ai-helper-head">
-          <span class="ai-helper-eye ai-helper-eye-left"></span>
-          <span class="ai-helper-eye ai-helper-eye-right"></span>
-          <span class="ai-helper-mouth">
-            <span class="ai-helper-wave"></span>
-            <span class="ai-helper-wave"></span>
-            <span class="ai-helper-wave"></span>
-          </span>
-        </span>
-        <span class="ai-helper-body">
-          <span class="ai-helper-core"></span>
-          <span class="ai-helper-arm ai-helper-arm-left"></span>
-          <span class="ai-helper-arm ai-helper-arm-right"></span>
-        </span>
-      </span>
+    <button type="button" id="chatbotLauncher" class="chatbot-launcher" aria-label="Open assistant" hidden>
+      <span class="chatbot-launcher-core"></span>
+      <span class="chatbot-launcher-ring"></span>
     </button>
 
     <section id="chatbotPanel" class="chatbot-panel" hidden aria-label="Community assistant">
@@ -518,6 +493,5 @@
     <script type="module" src="/audio-transcriber.js"></script>
     <script src="/app.js"></script>
     <script src="/chatbot.js"></script>
-    <script src="/ai-helper-bot.js"></script>
   </body>
 </html>

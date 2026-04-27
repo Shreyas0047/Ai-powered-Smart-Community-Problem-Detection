@@ -15,10 +15,9 @@
     return;
   }
 
-  const positionStorageKey = "smart-community-helper-bot-position";
   const position = {
-    x: Math.round(window.innerWidth - 156),
-    y: Math.round(window.innerHeight * 0.54)
+    x: window.innerWidth - 104,
+    y: window.innerHeight - 108
   };
   const animationDurationMs = 220;
 
@@ -26,19 +25,6 @@
   let isAnimating = false;
   let dragState = null;
   let historyLoadedForUser = "";
-
-  function emitBotState(state, extraDetail = {}) {
-    launcher.dataset.botState = state;
-    window.dispatchEvent(
-      new CustomEvent("smart-community:chatbot-state", {
-        detail: {
-          state,
-          isOpen,
-          ...extraDetail
-        }
-      })
-    );
-  }
 
   function getApp() {
     return window.smartCommunityApp || null;
@@ -56,41 +42,9 @@
     getApp()?.setDashboardMessage?.(message, type);
   }
 
-  function getLauncherBounds() {
-    const width = launcher.offsetWidth || 96;
-    const height = launcher.offsetHeight || 116;
-    return { width, height };
-  }
-
-  function savePosition() {
-    try {
-      localStorage.setItem(positionStorageKey, JSON.stringify(position));
-    } catch (_error) {
-      // ignore storage failures
-    }
-  }
-
-  function loadSavedPosition() {
-    try {
-      const raw = localStorage.getItem(positionStorageKey);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw);
-      if (Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y)) {
-        position.x = parsed.x;
-        position.y = parsed.y;
-      }
-    } catch (_error) {
-      // ignore storage failures
-    }
-  }
-
   function clampPosition() {
-    const { width, height } = getLauncherBounds();
-    position.x = Math.max(16, Math.min(position.x, window.innerWidth - width - 16));
-    position.y = Math.max(16, Math.min(position.y, window.innerHeight - height - 16));
+    position.x = Math.max(16, Math.min(position.x, window.innerWidth - 84));
+    position.y = Math.max(16, Math.min(position.y, window.innerHeight - 84));
   }
 
   function updateLauncherPosition() {
@@ -138,7 +92,6 @@
     sendBtn.disabled = isLoading;
     input.disabled = isLoading;
     setTyping(isLoading);
-    emitBotState(isLoading ? "talking" : isOpen ? "open" : "idle");
   }
 
   function updateTranscriptButton() {
@@ -154,8 +107,6 @@
       panel.hidden = true;
       isOpen = false;
       historyLoadedForUser = "";
-      launcher.setAttribute("aria-expanded", "false");
-      emitBotState("idle", { reason: "logged_out" });
       return;
     }
 
@@ -215,7 +166,6 @@
 
     isAnimating = true;
     isOpen = true;
-    launcher.setAttribute("aria-expanded", "true");
     panel.hidden = false;
     updatePanelPosition();
     updateTranscriptButton();
@@ -224,7 +174,6 @@
       panel.classList.add("is-open");
       window.setTimeout(() => {
         isAnimating = false;
-        emitBotState("open");
         input.focus();
       }, animationDurationMs);
     });
@@ -237,12 +186,10 @@
 
     isAnimating = true;
     isOpen = false;
-    launcher.setAttribute("aria-expanded", "false");
     panel.classList.remove("is-open");
     window.setTimeout(() => {
       panel.hidden = true;
       isAnimating = false;
-      emitBotState("idle");
     }, animationDurationMs);
   }
 
@@ -271,10 +218,8 @@
       renderMessages(result.messages || []);
       statusText.textContent = "Chat history cleared.";
       setDashboardMessage("Chat history cleared.", "success");
-      emitBotState("open", { cleared: true });
     } catch (error) {
       statusText.textContent = error.message || "Could not clear chat history.";
-      emitBotState("error", { message: error.message || "Could not clear chat history." });
     } finally {
       clearBtn.disabled = false;
     }
@@ -306,9 +251,6 @@
       return;
     }
     launcher.releasePointerCapture(event.pointerId);
-    if (dragState.moved) {
-      savePosition();
-    }
     dragState = null;
   }
 
@@ -348,13 +290,9 @@
       if (result.meta?.complaintCreated) {
         setDashboardMessage("Complaint created from chatbot.", "success");
       }
-      emitBotState("talking", { intent: result.intent || "fallback" });
-      window.setTimeout(() => emitBotState(isOpen ? "open" : "idle"), 900);
     } catch (error) {
       renderMessage({ sender: "bot", content: error.message || "The assistant could not respond right now." });
       statusText.textContent = error.message || "The assistant could not respond right now.";
-      emitBotState("error", { message: error.message || "The assistant could not respond right now." });
-      window.setTimeout(() => emitBotState(isOpen ? "open" : "idle"), 900);
     } finally {
       setLoading(false);
     }
@@ -368,9 +306,7 @@
     updateTranscriptButton();
   });
 
-  loadSavedPosition();
   updateLauncherPosition();
   updateTranscriptButton();
   loadHistory().catch(() => {});
-  emitBotState("idle");
 })();
