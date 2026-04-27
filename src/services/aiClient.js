@@ -1059,10 +1059,10 @@ async function processTranscriptWithAi(payload) {
 }
 
 function detectIntentLocally(message, history = []) {
-  const normalized = normalizeText(message);
-  const recentText = normalizeText(
-    history
-      .slice(-6)
+    const normalized = normalizeText(message);
+    const recentText = normalizeText(
+      history
+        .slice(-6)
       .map((item) => item.content)
       .join(" ")
   );
@@ -1080,13 +1080,49 @@ function detectIntentLocally(message, history = []) {
       intent: "complaint_status",
       response: "Checking your latest complaint status now.",
       confidence: 0.9
-    };
-  }
+      };
+    }
 
-  if (/(raise|report|submit|file|complaint|issue|problem)/.test(normalized) || /need to complain/.test(recentText)) {
-    return {
-      intent: "raise_complaint",
-      response: "Share the complaint details, and I will guide you through creating it here in chat.",
+    const faqResponses = [
+      {
+        patterns: ["login", "sign in", "register", "sign up", "signup", "otp", "account"],
+        response: "Use the login and registration overlay to sign in as Citizen or Admin. Registration requires email OTP verification before the account is created."
+      },
+      {
+        patterns: ["report", "raise complaint", "submit complaint", "file complaint", "how do i complain"],
+        response: "Use Report an Issue to submit a complaint. You can enter text, record voice, attach an image, set the location, then submit it for AI analysis and routing."
+      },
+      {
+        patterns: ["voice", "audio", "transcript", "transcription", "recording", "microphone"],
+        response: "Voice complaints use live recording in the browser. After recording stops, the backend sends the audio to Deepgram, then the processed transcript is filled into the complaint summary."
+      },
+      {
+        patterns: ["map", "location", "live location", "preview"],
+        response: "Use Live Location to fill the location field automatically. Show Map updates the live location preview."
+      },
+      {
+        patterns: ["admin", "dashboard", "reset", "alerts", "status update"],
+        response: "Admin actions stay permission-protected. Admin users can review complaints, update status, and manage dashboard data through the admin panels."
+      },
+      {
+        patterns: ["bbmp", "email", "mail", "portal", "pdf", "receipt", "download"],
+        response: "The system can generate a PDF complaint summary and support the BBMP email flow from the dashboard."
+      }
+    ];
+
+    const faqMatch = faqResponses.find((item) => item.patterns.some((pattern) => normalized.includes(pattern)));
+    if (faqMatch) {
+      return {
+        intent: "faq",
+        response: faqMatch.response,
+        confidence: 0.76
+      };
+    }
+
+    if (/(raise|report|submit|file|complaint|issue|problem)/.test(normalized) || /need to complain/.test(recentText)) {
+      return {
+        intent: "raise_complaint",
+        response: "Share the complaint details, and I will guide you through creating it here in chat.",
       confidence: 0.82
     };
   }

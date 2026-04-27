@@ -1,5 +1,17 @@
-from category_catalog import FAQ_HINTS
+from category_catalog import FAQ_HINTS, FAQ_TOPICS
 from text_processing import normalize_text
+
+
+def find_faq_response(normalized):
+    for topic in FAQ_TOPICS:
+        if any(pattern in normalized for pattern in topic["patterns"]):
+            return topic["response"]
+
+    for key, answer in FAQ_HINTS.items():
+        if key in normalized:
+            return answer
+
+    return ""
 
 
 def classify_chat_intent(message, history):
@@ -27,9 +39,9 @@ def classify_chat_intent(message, history):
             "confidence": 0.9,
         }
 
-    for key, answer in FAQ_HINTS.items():
-        if key in normalized:
-            return {"intent": "fallback", "response": answer, "confidence": 0.72}
+    faq_response = find_faq_response(normalized)
+    if faq_response:
+        return {"intent": "faq", "response": faq_response, "confidence": 0.78}
 
     if any(term in normalized for term in ["complaint", "issue", "problem", "garbage", "water", "road", "fire", "wire", "leak"]) or "raise_complaint" in recent_text:
         return {
@@ -40,7 +52,6 @@ def classify_chat_intent(message, history):
 
     return {
         "intent": "fallback",
-        "response": "I can help with complaint status, raising a complaint, common questions, and dashboard navigation.",
+        "response": "I can help with complaint status, raising a complaint, FAQs, and dashboard navigation.",
         "confidence": 0.42,
     }
-

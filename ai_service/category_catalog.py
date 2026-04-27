@@ -151,3 +151,37 @@ FAQ_HINTS = {
     "map": "Use the live location preview in the map panel to verify the issue location.",
 }
 
+FAQ_TOPICS = [
+    {
+        "patterns": ["login", "sign in", "register", "signup", "sign up", "otp", "account"],
+        "response": "Use the login and registration overlay to sign in as Citizen or Admin. Registration requires email OTP verification before the account is created."
+    },
+    {
+        "patterns": ["report", "raise complaint", "submit complaint", "file complaint", "how do i complain"],
+        "response": "Use Report an Issue to submit a complaint. You can enter text, record voice, attach an image, set the location, then submit it for AI analysis and routing."
+    },
+    {
+        "patterns": ["voice", "audio", "transcript", "transcription", "recording", "microphone"],
+        "response": "Voice complaints use live recording in the browser. After recording stops, the backend sends the audio to Deepgram, then the processed transcript is filled into the complaint summary."
+    },
+    {
+        "patterns": ["map", "location", "live location", "preview"],
+        "response": "Use Live Location to fill the location field automatically. Show Map updates the live location preview without reopening the old complaint marker map."
+    },
+    {
+        "patterns": ["admin", "dashboard", "reset", "alerts", "status update"],
+        "response": "Admin actions stay permission-protected. Admin users can review complaints, update status, manage dashboard data, and clear operational history through the admin panels."
+    },
+    {
+        "patterns": ["bbmp", "email", "mail", "portal"],
+        "response": "The system can generate a PDF complaint summary and send the complaint to the BBMP email flow. The BBMP portal link remains available in the dashboard footer."
+    },
+    {
+        "patterns": ["pdf", "receipt", "download"],
+        "response": "After complaint analysis, you can generate a PDF summary from the dashboard. That output is intended for record keeping and email escalation."
+    },
+    {
+        "patterns": ["status", "track", "progress", "latest complaint"],
+        "response": "You can ask the chatbot for complaint status, or use the complaint history panels to review the latest status, priority, and assigned authority."
+    },
+]
