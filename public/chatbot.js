@@ -15,9 +15,10 @@
     return;
   }
 
+  const positionStorageKey = "smart-community-helper-bot-position";
   const position = {
-    x: window.innerWidth - 104,
-    y: window.innerHeight - 108
+    x: Math.round(window.innerWidth - 156),
+    y: Math.round(window.innerHeight * 0.54)
   };
   const animationDurationMs = 220;
 
@@ -55,9 +56,41 @@
     getApp()?.setDashboardMessage?.(message, type);
   }
 
+  function getLauncherBounds() {
+    const width = launcher.offsetWidth || 96;
+    const height = launcher.offsetHeight || 116;
+    return { width, height };
+  }
+
+  function savePosition() {
+    try {
+      localStorage.setItem(positionStorageKey, JSON.stringify(position));
+    } catch (_error) {
+      // ignore storage failures
+    }
+  }
+
+  function loadSavedPosition() {
+    try {
+      const raw = localStorage.getItem(positionStorageKey);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y)) {
+        position.x = parsed.x;
+        position.y = parsed.y;
+      }
+    } catch (_error) {
+      // ignore storage failures
+    }
+  }
+
   function clampPosition() {
-    position.x = Math.max(16, Math.min(position.x, window.innerWidth - 84));
-    position.y = Math.max(16, Math.min(position.y, window.innerHeight - 84));
+    const { width, height } = getLauncherBounds();
+    position.x = Math.max(16, Math.min(position.x, window.innerWidth - width - 16));
+    position.y = Math.max(16, Math.min(position.y, window.innerHeight - height - 16));
   }
 
   function updateLauncherPosition() {
@@ -273,6 +306,9 @@
       return;
     }
     launcher.releasePointerCapture(event.pointerId);
+    if (dragState.moved) {
+      savePosition();
+    }
     dragState = null;
   }
 
@@ -332,6 +368,7 @@
     updateTranscriptButton();
   });
 
+  loadSavedPosition();
   updateLauncherPosition();
   updateTranscriptButton();
   loadHistory().catch(() => {});
