@@ -25,6 +25,7 @@ from ai_config import (
     FLORENCE_TIMEOUT_SECONDS,
 )
 from memory_runtime import trim_process_memory
+from request_context import current_request_id
 from vision_image_transport import prepare_jpeg
 from vision_provider_contract import clean_text, provider_result
 
@@ -48,27 +49,41 @@ class FlorenceRemoteProvider:
         self._last_status = "not_called"
         self._last_error = ""
         self._last_called_at = None
+        self._last_request_id = ""
 
     @property
     def configured(self):
         endpoint = urllib.parse.urlparse(FLORENCE_SERVICE_URL)
         secure = endpoint.scheme == "https"
-        local_http = FLORENCE_ALLOW_HTTP and endpoint.scheme == "http" and endpoint.hostname in {"localhost", "127.0.0.1"}
+        explicit_http = FLORENCE_ALLOW_HTTP and endpoint.scheme == "http"
         return bool(
             FLORENCE_REMOTE_ENABLED
             and FLORENCE_SERVICE_TOKEN
             and endpoint.hostname
-            and (secure or local_http)
+            and (secure or explicit_http)
         )
 
     def _log(self, event, **details):
-        LOGGER.info(json.dumps({"event": event, "provider": self.name, **details}, sort_keys=True, default=str))
+        request_id = current_request_id()
+        LOGGER.info(
+            json.dumps(
+                {
+                    "event": event,
+                    "provider": self.name,
+                    **({"requestId": request_id} if request_id else {}),
+                    **details,
+                },
+                sort_keys=True,
+                default=str,
+            )
+        )
 
     def _set_status(self, status, error=""):
         with self._state_lock:
             self._last_status = status
             self._last_error = clean_text(error, 180)
             self._last_called_at = time.time()
+            self._last_request_id = current_request_id()
 
     def _record_success(self):
         with self._state_lock:
@@ -164,7 +179,7 @@ class FlorenceRemoteProvider:
                 FLORENCE_JPEG_QUALITY,
                 FLORENCE_MAX_TRANSMIT_BYTES,
             )
-            request_id = uuid.uuid4().hex
+            request_id = current_request_id() or uuid.uuid4().hex
             body, boundary = self._multipart(image_bytes, request_id)
         except (OSError, ValueError) as error:
             self._set_status("invalid_image", str(error))
@@ -239,6 +254,7 @@ class FlorenceRemoteProvider:
                 "lastStatus": self._last_status,
                 "lastError": self._last_error,
                 "lastCalledAt": self._last_called_at,
+                "lastRequestId": self._last_request_id,
                 "consecutiveFailures": self._consecutive_failures,
                 "circuitOpen": circuit_open,
             }

@@ -39,7 +39,7 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 | Capability | Production behavior |
 | --- | --- |
 | Multimodal reporting | Accepts text, voice transcript, JPEG/PNG/WebP evidence, and Bengaluru location |
-| Visual perception | Uses Florence-2 on Cloud Run for structured scene observations, hazards, infrastructure, image quality, and uncertainty |
+| Visual perception | Uses a structured provider chain for scene observations, hazards, infrastructure, image quality, and uncertainty |
 | Civic reasoning | Determines category, priority, threat score, safety gate, and review requirements inside Urban Pulse |
 | Bengaluru routing | Resolves ward evidence and routes to configurable BBMP-aligned departments and escalation destinations |
 | Community verification | Nearby eligible users can mark an issue as still present, worsening, resolved, or duplicated without seeing reporter identity |
@@ -79,7 +79,8 @@ flowchart LR
     UI --> API[Express API]
     API --> DB[(MongoDB Atlas)]
     API --> AI[Flask AI Service]
-    AI --> Vision[Florence-2<br/>Google Cloud Run]
+    AI --> Vision[Visual Provider Chain]
+    Vision --> Florence[Florence-2<br/>Cloud Run]
     AI --> Decision[Urban Pulse<br/>Decision Engine]
     Decision --> API
     API --> Route[Bengaluru Routing]
@@ -106,7 +107,7 @@ sequenceDiagram
     participant W as Web
     participant A as Express API
     participant I as AI Service
-    participant V as Florence
+    participant V as Visual provider
     participant D as MongoDB
 
     U->>W: Add evidence and Bengaluru location
@@ -123,7 +124,7 @@ sequenceDiagram
 
 ## Decision Boundaries
 
-Florence supplies observations such as scene description, visible issues, damaged infrastructure, hazards, environmental conditions, image quality, and uncertainty. Urban Pulse remains responsible for:
+Visual providers supply observations such as scene description, visible issues, damaged infrastructure, hazards, environmental conditions, image quality, and uncertainty. Urban Pulse remains responsible for:
 
 - final complaint category and priority;
 - threat score and emergency safety gate;
@@ -241,10 +242,11 @@ These variables belong to the **Flask AI service**, not the browser:
 
 | Variable | Recommended value |
 | --- | --- |
-| <code>VISION_PROVIDER_ORDER</code> | <code>florence</code> |
+| <code>VISION_PROVIDER_ORDER</code> | <code>florence,gemini</code> |
 | <code>FLORENCE_REMOTE_ENABLED</code> | <code>true</code> |
-| <code>FLORENCE_SERVICE_URL</code> | Cloud Run service URL |
-| <code>FLORENCE_SERVICE_TOKEN</code> | Same long secret configured on Cloud Run |
+| <code>FLORENCE_SERVICE_URL</code> | Remote Florence service URL |
+| <code>FLORENCE_ALLOW_HTTP</code> | Keep <code>false</code>; use <code>true</code> only for an explicitly accepted IP-based test deployment |
+| <code>FLORENCE_SERVICE_TOKEN</code> | Same long secret configured on the remote Florence service |
 | <code>FLORENCE_TIMEOUT_SECONDS</code> | <code>50</code> |
 | <code>FLORENCE_MAX_RETRIES</code> | <code>1</code> |
 | <code>FLORENCE_ENABLED</code> | <code>false</code> on memory-limited Render instances |
@@ -305,6 +307,7 @@ npm run verify:release
 | <code>npm run verify:image-reasoning</code> | Image decision behavior and uncertainty |
 | <code>npm run verify:florence-remote</code> | Cloud provider contract, timeout, cache, authentication |
 | <code>npm run verify:florence-service</code> | Standalone Florence service |
+| <code>npm run verify:ai-request-tracing</code> | Browser-to-visual-provider correlation and failure-stage propagation |
 | <code>npm run verify:bengaluru-routing</code> | Ward and department routing |
 | <code>npm run verify:community-verification</code> | Privacy-safe nearby verification |
 | <code>npm run verify:authority-tickets</code> | Authority adapters and ticket state |
@@ -332,6 +335,8 @@ The repository includes [render.yaml](render.yaml) for:
 2. <code>smart-community-web</code> — Express API and frontend.
 
 Create both services, set all <code>sync: false</code> secrets in the Render dashboard, and ensure <code>AI_SERVICE_URL</code> points from the web service to the deployed Flask service.
+
+The web <code>/health</code> endpoint performs a cached live AI authentication probe and reports its status, latency, last success, request ID, and failure stage without exposing secrets. Image-analysis requests preserve the same <code>X-Request-ID</code> through the browser, Express, Flask, and the selected visual provider. When an upload fails, use the reference shown in the report UI to locate matching structured logs. Failure stages distinguish browser transport, web authentication, web-to-AI transport, AI authentication, payload validation, and provider execution.
 
 ### Florence On Cloud Run
 

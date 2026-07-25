@@ -1,9 +1,13 @@
 import hmac
+import json
 import logging
 import os
+import time
+import uuid
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 
 from category_catalog import COMPLAINT_CATEGORIES
 from chat_logic import classify_chat_intent
@@ -12,6 +16,7 @@ from florence_runtime import florence_runtime
 from ai_config import FLORENCE_ENABLED, FLORENCE_WARMUP
 from pipeline import run_hybrid_pipeline
 from resolution_analysis import compare_resolution_evidence
+from request_context import reset_request_id, set_request_id
 
 MAX_TEXT_CHARS = 3500
 MAX_LOCATION_CHARS = 500
@@ -220,18 +225,99 @@ def service_token_matches(supplied, expected):
         return False
 
 
+def normalized_request_id(value):
+    candidate = "".join(character for character in str(value or "") if character.isalnum() or character in "._-")[:80]
+    return candidate if len(candidate) >= 8 else uuid.uuid4().hex
+
+
+def log_request_event(event, **details):
+    logging.getLogger("urban_pulse.requests").info(
+        json.dumps({"event": event, **details}, sort_keys=True, default=str)
+    )
+
+
 @app.before_request
 def require_service_token():
+    g.request_id = normalized_request_id(request.headers.get("X-Request-ID"))
+    g.request_started = time.monotonic()
+    g.request_context_token = set_request_id(g.request_id)
+    if request.method == "POST":
+        log_request_event("ai_request_started", requestId=g.request_id, path=request.path)
     if request.method == "POST" and AI_SERVICE_REQUIRE_TOKEN:
         supplied = request.headers.get("X-Urban-Pulse-Service-Token", "")
         if not service_token_matches(supplied, AI_SERVICE_TOKEN):
-            return jsonify({"error": "Service authentication required."}), 401
+            log_request_event(
+                "ai_request_rejected",
+                requestId=g.request_id,
+                path=request.path,
+                failureStage="ai_service_auth",
+                statusCode=401,
+            )
+            return jsonify(
+                {
+                    "error": "Service authentication required.",
+                    "requestId": g.request_id,
+                    "failureStage": "ai_service_auth",
+                }
+            ), 401
     return None
+
+
+@app.after_request
+def complete_request(response):
+    request_id = getattr(g, "request_id", normalized_request_id(""))
+    response.headers["X-Request-ID"] = request_id
+    if request.method == "POST":
+        started = getattr(g, "request_started", time.monotonic())
+        log_request_event(
+            "ai_request_completed",
+            requestId=request_id,
+            path=request.path,
+            statusCode=response.status_code,
+            durationMs=int((time.monotonic() - started) * 1000),
+        )
+    context_token = getattr(g, "request_context_token", None)
+    if context_token is not None:
+        reset_request_id(context_token)
+        g.request_context_token = None
+    return response
 
 
 @app.errorhandler(413)
 def request_too_large(_error):
-    return jsonify({"error": "AI request payload is too large."}), 413
+    return jsonify(
+        {
+            "error": "AI request payload is too large.",
+            "requestId": getattr(g, "request_id", ""),
+            "failureStage": "ai_payload_validation",
+        }
+    ), 413
+
+
+@app.errorhandler(Exception)
+def unexpected_error(error):
+    if isinstance(error, HTTPException):
+        status_code = int(error.code or 500)
+        message = error.description or "AI service request failed."
+    else:
+        status_code = 500
+        message = "AI service request failed."
+        logging.getLogger("urban_pulse.requests").exception("Unhandled AI service error")
+    log_request_event(
+        "ai_request_failed",
+        requestId=getattr(g, "request_id", ""),
+        path=request.path,
+        failureStage="ai_service",
+        statusCode=status_code,
+        errorType=type(error).__name__,
+    )
+    return jsonify(
+        {
+            "error": message,
+            "requestId": getattr(g, "request_id", ""),
+            "failureStage": "ai_service",
+        }
+    ), status_code
 
 
 @app.get("/health")
@@ -251,7 +337,11 @@ def health():
             "capabilities": {
                 "semanticTextClassification": True,
                 "imageClassification": True,
-                "sceneUnderstanding": bool(florence.get("configured") or gemini.get("configured") or local.get("enabled")),
+                "sceneUnderstanding": bool(
+                    florence.get("configured")
+                    or gemini.get("configured")
+                    or local.get("enabled")
+                ),
                 "confidenceCalibration": True,
                 "textImageConflictDetection": True,
                 "structuredExplainability": True,
@@ -275,7 +365,9 @@ def readiness():
         or bool(scene.get("ready"))
     )
     if provider_ready or (
-        not florence.get("enabled") and not gemini.get("enabled") and not scene.get("enabled")
+        not florence.get("enabled")
+        and not gemini.get("enabled")
+        and not scene.get("enabled")
     ):
         status = "ready"
     elif scene.get("state") == "loading":
@@ -289,7 +381,14 @@ def readiness():
 @app.post("/auth/probe")
 def auth_probe():
     """Verify service-to-service authentication without invoking the AI pipeline."""
-    return jsonify({"status": "ok", "service": "urban-pulse-ai-service", "authenticated": True})
+    return jsonify(
+        {
+            "status": "ok",
+            "service": "urban-pulse-ai-service",
+            "authenticated": True,
+            "requestId": g.request_id,
+        }
+    )
 
 
 @app.post("/analyze")
@@ -299,6 +398,7 @@ def analyze():
     result = run_hybrid_pipeline(sanitized_payload)
     result["inputDiagnostics"] = input_diagnostics
     result.setdefault("aiMeta", {})["inputSanitized"] = bool(input_diagnostics.get("sanitized"))
+    result["aiMeta"]["requestId"] = g.request_id
     return jsonify(result)
 
 

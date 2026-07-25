@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const env = require("../config/env");
 const { buildThreatAssessment } = require("./threatAssessment");
 const aiCategories = require("../../shared/aiCategories.json");
@@ -7,9 +8,14 @@ const AI_EVALUATION_VERSION = "urban-pulse-threat-v1";
 let aiServiceConnectionStatus = {
   status: "not_checked",
   failureType: "",
+  failureStage: "",
   httpStatus: null,
-  checkedAt: null
+  checkedAt: null,
+  lastSuccessAt: null,
+  latencyMs: null,
+  requestId: ""
 };
+let aiServiceProbePromise = null;
 
 const ISSUE_PROFILES = [
   {
@@ -1130,9 +1136,15 @@ function analyzeComplaintLocally(payload) {
   };
 }
 
-function aiServiceHeaders() {
+function normalizedRequestId(value) {
+  const candidate = String(value || "").trim();
+  return /^[A-Za-z0-9._-]{8,80}$/.test(candidate) ? candidate : crypto.randomUUID();
+}
+
+function aiServiceHeaders(requestId) {
   return {
     "Content-Type": "application/json",
+    "X-Request-ID": normalizedRequestId(requestId),
     ...(env.aiServiceToken ? { "X-Urban-Pulse-Service-Token": env.aiServiceToken } : {})
   };
 }
@@ -1153,12 +1165,17 @@ function classifyAiServiceFailure(error) {
   return "unavailable";
 }
 
-function recordAiServiceConnection(status, error = null) {
+function recordAiServiceConnection(status, error = null, details = {}) {
+  const checkedAt = new Date().toISOString();
   aiServiceConnectionStatus = {
     status,
     failureType: error ? classifyAiServiceFailure(error) : "",
+    failureStage: error?.failureStage || "",
     httpStatus: Number(error?.statusCode) || null,
-    checkedAt: new Date().toISOString()
+    checkedAt,
+    lastSuccessAt: status === "ok" ? checkedAt : aiServiceConnectionStatus.lastSuccessAt,
+    latencyMs: Number.isFinite(details.latencyMs) ? details.latencyMs : null,
+    requestId: normalizedRequestId(details.requestId)
   };
 }
 
@@ -1169,15 +1186,17 @@ function getAiServiceConnectionStatus() {
   };
 }
 
-function logAiServiceFailure(error, operation, payload = {}) {
+function logAiServiceFailure(error, operation, payload = {}, requestId = "") {
   const message = String(error?.message || "AI service request failed")
     .replace(/[\r\n]+/g, " ")
     .slice(0, 240);
   console.warn(JSON.stringify({
     event: "ai_service_request_failed",
     operation,
+    requestId: normalizedRequestId(requestId),
     serviceHost: aiServiceHost(),
     failureType: classifyAiServiceFailure(error),
+    failureStage: error?.failureStage || "web_to_ai",
     httpStatus: Number(error?.statusCode) || undefined,
     hasImage: Boolean(payload.imageBase64),
     message
@@ -1192,18 +1211,21 @@ async function parseAiServiceResponse(response) {
     const error = new Error("AI microservice returned an invalid JSON response.");
     error.code = "INVALID_RESPONSE";
     error.statusCode = response.status;
+    error.failureStage = "web_to_ai_response";
     throw error;
   }
 }
 
 async function probeAiService() {
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Math.min(env.aiServiceTimeoutMs, 30000));
 
   try {
     const response = await fetch(`${env.aiServiceUrl}/auth/probe`, {
       method: "POST",
-      headers: aiServiceHeaders(),
+      headers: aiServiceHeaders(requestId),
       body: "{}",
       signal: controller.signal
     });
@@ -1211,26 +1233,49 @@ async function probeAiService() {
     if (!response.ok) {
       const error = new Error(data.error || "AI service authentication probe failed.");
       error.statusCode = response.status;
+      error.failureStage = data.failureStage || "ai_service_auth";
       throw error;
     }
-    recordAiServiceConnection("ok");
-    return { status: "ok", authenticated: data.authenticated === true, serviceHost: aiServiceHost() };
+    const latencyMs = Date.now() - startedAt;
+    recordAiServiceConnection("ok", null, { requestId, latencyMs });
+    return {
+      ...getAiServiceConnectionStatus(),
+      authenticated: data.authenticated === true
+    };
   } catch (error) {
-    recordAiServiceConnection("failed", error);
+    error.failureStage = error.failureStage || "web_to_ai";
+    recordAiServiceConnection("failed", error, { requestId, latencyMs: Date.now() - startedAt });
     throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function analyzeComplaint(payload) {
+async function refreshAiServiceConnectionStatus({ maxAgeMs = 60000 } = {}) {
+  const checkedAt = Date.parse(aiServiceConnectionStatus.checkedAt || "");
+  if (Number.isFinite(checkedAt) && Date.now() - checkedAt < maxAgeMs) {
+    return getAiServiceConnectionStatus();
+  }
+  if (!aiServiceProbePromise) {
+    aiServiceProbePromise = probeAiService()
+      .catch(() => getAiServiceConnectionStatus())
+      .finally(() => {
+        aiServiceProbePromise = null;
+      });
+  }
+  return aiServiceProbePromise;
+}
+
+async function analyzeComplaint(payload, options = {}) {
+  const requestId = normalizedRequestId(options.requestId);
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), env.aiServiceTimeoutMs);
 
   try {
     const response = await fetch(`${env.aiServiceUrl}/analyze`, {
       method: "POST",
-      headers: aiServiceHeaders(),
+      headers: aiServiceHeaders(requestId),
       body: JSON.stringify(payload),
       signal: controller.signal
     });
@@ -1239,9 +1284,18 @@ async function analyzeComplaint(payload) {
     if (!response.ok) {
       const error = new Error(data.error || "AI microservice request failed");
       error.statusCode = response.status;
+      error.failureStage = data.failureStage || "ai_service";
       throw error;
     }
-    recordAiServiceConnection("ok");
+    recordAiServiceConnection("ok", null, { requestId, latencyMs: Date.now() - startedAt });
+    console.info(JSON.stringify({
+      event: "ai_service_request_succeeded",
+      operation: "analyze",
+      requestId,
+      serviceHost: aiServiceHost(),
+      durationMs: Date.now() - startedAt,
+      hasImage: Boolean(payload.imageBase64)
+    }));
 
     const threatAssessment = buildThreatAssessment(payload, {
       remoteAnalysis: data
@@ -1256,6 +1310,7 @@ async function analyzeComplaint(payload) {
       },
       aiMeta: {
         ...(data.aiMeta || {}),
+        requestId,
         provider: data.aiMeta?.provider || "flask",
         engine: data.aiMeta?.engine || "hybrid-scene-threat-v5",
         model: data.aiMeta?.model || "sentence-transformers+florence-or-safe-fallback",
@@ -1274,15 +1329,18 @@ async function analyzeComplaint(payload) {
       }
     };
   } catch (error) {
-    recordAiServiceConnection("failed", error);
-    logAiServiceFailure(error, "analyze", payload);
+    error.failureStage = error.failureStage || "web_to_ai";
+    recordAiServiceConnection("failed", error, { requestId, latencyMs: Date.now() - startedAt });
+    logAiServiceFailure(error, "analyze", payload, requestId);
     const fallback = analyzeComplaintLocally(payload);
     return {
       ...fallback,
       aiMeta: {
         ...(fallback.aiMeta || {}),
+        requestId,
         upstreamStatus: classifyAiServiceFailure(error),
-        upstreamHttpStatus: Number(error?.statusCode) || null
+        upstreamHttpStatus: Number(error?.statusCode) || null,
+        upstreamStage: error.failureStage
       }
     };
   } finally {
@@ -1657,6 +1715,7 @@ module.exports = {
   analyzeComplaint,
   probeAiService,
   getAiServiceConnectionStatus,
+  refreshAiServiceConnectionStatus,
   compareResolutionEvidence,
   transcribeAudio,
   processTranscriptWithAi,

@@ -10,6 +10,7 @@
     "seed": "node scripts/seedDatabase.js",
     "seed:fresh": "node scripts/seedDatabase.js --fresh",
     "verify:ai-service-auth": "python3 scripts/verifyAiServiceAuth.py",
+    "verify:ai-request-tracing": "node scripts/verifyAiRequestTracing.js",
     "verify:bengaluru-scope": "node scripts/verifyBengaluruScope.js",
     "verify:bengaluru-routing": "node scripts/verifyBengaluruRouting.js",
     "verify:community-verification": "node scripts/verifyCommunityVerification.js",

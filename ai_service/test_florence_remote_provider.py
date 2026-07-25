@@ -102,10 +102,34 @@ class FlorenceRemoteProviderTests(unittest.TestCase):
     def test_untrusted_http_url_is_not_called(self):
         provider = FlorenceRemoteProvider(opener=lambda *_args: self.fail("Unexpected network call"))
         image = Image.new("RGB", (320, 240))
-        with self.configured(), patch("florence_remote_provider.FLORENCE_SERVICE_URL", "http://untrusted.example"):
+        with (
+            self.configured(),
+            patch("florence_remote_provider.FLORENCE_SERVICE_URL", "http://untrusted.example"),
+            patch("florence_remote_provider.FLORENCE_ALLOW_HTTP", False),
+        ):
             result = provider.analyze(image, "untrusted-url")
         image.close()
         self.assertEqual(result["status"], "unavailable")
+
+    def test_remote_http_url_requires_explicit_opt_in(self):
+        calls = []
+
+        def opener(request, timeout):
+            calls.append((request.full_url, timeout))
+            return FakeResponse(florence_envelope())
+
+        provider = FlorenceRemoteProvider(opener=opener)
+        image = Image.new("RGB", (320, 240))
+        with (
+            self.configured(),
+            patch("florence_remote_provider.FLORENCE_SERVICE_URL", "http://203.0.113.10:8080"),
+            patch("florence_remote_provider.FLORENCE_ALLOW_HTTP", True),
+        ):
+            result = provider.analyze(image, "explicit-http-url")
+        image.close()
+
+        self.assertEqual(result["status"], "available")
+        self.assertEqual(calls[0][0], "http://203.0.113.10:8080/v1/analyze")
 
     def test_gemini_activates_after_remote_florence_failure(self):
         chain = VisionProviderChain()

@@ -11,6 +11,7 @@ const checks = [
   ["florence-remote", "python3", ["-m", "unittest", "ai_service/test_florence_remote_provider.py"]],
   ["florence-service", "python3", ["-m", "unittest", "discover", "-s", "urban-pulse-florence/tests", "-v"]],
   ["ai-service-auth", "python3", ["scripts/verifyAiServiceAuth.py"]],
+  ["ai-request-tracing", "node", ["scripts/verifyAiRequestTracing.js"]],
   ["human-review", "node", ["scripts/verifyHumanReview.js"]],
   ["decision-audit", "node", ["scripts/verifyDecisionAudit.js"]],
   ["observability", "node", ["scripts/verifyAiObservability.js"]],

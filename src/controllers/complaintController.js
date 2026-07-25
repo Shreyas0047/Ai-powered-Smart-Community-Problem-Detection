@@ -92,7 +92,15 @@ function normalizeResolutionImage(payload) {
 
 async function analyzeAndCreateComplaint(req, res, next) {
   try {
-    const { analysis, complaint } = await createComplaintFromPayload(req.auth, req.body);
+    console.info(JSON.stringify({
+      event: "complaint_analysis_started",
+      requestId: req.requestId,
+      operation: "submit",
+      hasImage: Boolean(req.body?.imageBase64)
+    }));
+    const { analysis, complaint } = await createComplaintFromPayload(req.auth, req.body, {
+      requestId: req.requestId
+    });
 
     res.json({
       nlp: analysis.nlp,
@@ -128,24 +136,63 @@ async function analyzeAndCreateComplaint(req, res, next) {
       complaintId: complaint._id
     });
   } catch (error) {
+    error.failureStage = error.failureStage || "complaint_submission";
+    console.warn(JSON.stringify({
+      event: "complaint_analysis_failed",
+      requestId: req.requestId,
+      operation: "submit",
+      failureStage: error.failureStage,
+      statusCode: Number(error.statusCode) || 500,
+      errorType: error.name || "Error"
+    }));
     next(error);
   }
 }
 
 async function previewComplaintImage(req, res, next) {
   try {
-    const analysis = await analyzeImagePreview(req.body);
+    console.info(JSON.stringify({
+      event: "complaint_analysis_started",
+      requestId: req.requestId,
+      operation: "image_preview",
+      hasImage: Boolean(req.body?.imageBase64)
+    }));
+    const analysis = await analyzeImagePreview(req.body, { requestId: req.requestId });
+    const imageAnalysis = summarizeImageAnalysis(analysis);
+    console.info(JSON.stringify({
+      event: "complaint_analysis_completed",
+      requestId: req.requestId,
+      operation: "image_preview",
+      status: imageAnalysis.status,
+      provider: imageAnalysis.provider,
+      fallbackUsed: imageAnalysis.fallbackUsed,
+      failureStage: imageAnalysis.failureStage
+    }));
     res.json({
-      imageAnalysis: summarizeImageAnalysis(analysis),
+      imageAnalysis,
       cv: analysis.cv,
       decision: analysis.decision,
       confidence: analysis.confidence,
       confidenceLabel: analysis.confidenceLabel,
       reviewRequired: Boolean(analysis.reviewRequired || analysis.decision?.reviewRequired),
       threatAssessment: analysis.threatAssessment || analysis.cv?.threatAssessment || null,
-      aiMeta: analysis.aiMeta
+      aiMeta: analysis.aiMeta,
+      diagnostics: {
+        requestId: req.requestId,
+        stage: imageAnalysis.failureStage || "completed",
+        upstreamStatus: imageAnalysis.upstreamStatus || "ok"
+      }
     });
   } catch (error) {
+    error.failureStage = error.failureStage || "image_preview";
+    console.warn(JSON.stringify({
+      event: "complaint_analysis_failed",
+      requestId: req.requestId,
+      operation: "image_preview",
+      failureStage: error.failureStage,
+      statusCode: Number(error.statusCode) || 500,
+      errorType: error.name || "Error"
+    }));
     next(error);
   }
 }

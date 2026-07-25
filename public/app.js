@@ -1579,19 +1579,29 @@ function useLiveLocation() {
   );
 }
 
+function createClientRequestId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+}
+
 async function apiRequest(path, options = {}) {
   let response;
+  const requestId = String(options.requestId || createClientRequestId());
 
   try {
     response = await fetch(path, {
       ...options,
       headers: {
         ...getAuthHeaders(),
+        "X-Request-ID": requestId,
         ...(options.headers || {})
       }
     });
   } catch (_error) {
-    throw new Error("Unable to reach the server. Make sure the app is running and refresh the page.");
+    const error = new Error("Unable to reach the server. Make sure the app is running and refresh the page.");
+    error.requestId = requestId;
+    error.failureStage = "browser_to_web";
+    throw error;
   }
 
   const responseText = await response.text();
@@ -1616,9 +1626,14 @@ async function apiRequest(path, options = {}) {
     error.code = data.code || "";
     error.deliveryStatus = data.deliveryStatus || "";
     error.retryable = data.retryable;
+    error.requestId = data.requestId || response.headers.get("X-Request-ID") || requestId;
+    error.failureStage = data.failureStage || "web_api";
     throw error;
   }
 
+  if (data && typeof data === "object" && !data.requestId) {
+    data.requestId = response.headers.get("X-Request-ID") || requestId;
+  }
   return data;
 }
 
@@ -4791,11 +4806,12 @@ function renderImageAnalysisResult(imageAnalysis = {}) {
       state: "working"
     });
   } else {
+    const reference = imageAnalysis.requestId ? ` Reference: ${imageAnalysis.requestId}.` : "";
     aiAccuracyStatus.textContent = imageAnalysis.reason || "Visual analysis is unavailable. The photo will still be attached for review.";
     updateImageAnalysisProgress({
       value: 100,
       label: "Image analysis unavailable",
-      detail: "The photo remains attached. Re-submit it to retry visual analysis.",
+      detail: `The photo remains attached. Re-submit it to retry visual analysis.${reference}`,
       state: "error"
     });
   }
@@ -4924,7 +4940,7 @@ function setupImageUpload() {
       updateImageAnalysisProgress({
         value: 100,
         label: "Image analysis failed",
-        detail: "The photo remains selected. Re-submit it to try again.",
+        detail: `The photo remains selected. Re-submit it to try again.${error.requestId ? ` Reference: ${error.requestId}.` : ""}`,
         state: "error"
       });
       scheduleDraftSave();
@@ -4948,7 +4964,7 @@ showAiAccuracyBtn.addEventListener("click", async () => {
     updateImageAnalysisProgress({
       value: 100,
       label: "Image analysis failed",
-      detail: "The photo remains selected. Re-submit it to try again.",
+      detail: `The photo remains selected. Re-submit it to try again.${error.requestId ? ` Reference: ${error.requestId}.` : ""}`,
       state: "error"
     });
   }
@@ -4978,7 +4994,7 @@ retryImageAnalysisBtn.addEventListener("click", async () => {
     updateImageAnalysisProgress({
       value: 100,
       label: "Image analysis failed",
-      detail: "The photo remains selected. Re-submit it to try again.",
+      detail: `The photo remains selected. Re-submit it to try again.${error.requestId ? ` Reference: ${error.requestId}.` : ""}`,
       state: "error"
     });
   }

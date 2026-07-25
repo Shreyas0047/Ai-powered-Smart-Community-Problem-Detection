@@ -5,7 +5,7 @@ const path = require("path");
 const env = require("./config/env");
 const apiRoutes = require("./routes/api");
 const { setSecurityHeaders, setNoStoreHeaders, createRateLimiter } = require("./middleware/security");
-const { getAiServiceConnectionStatus } = require("./services/aiClient");
+const { refreshAiServiceConnectionStatus } = require("./services/aiClient");
 
 const app = express();
 const allowedOrigins = new Set([`http://localhost:${env.port}`, `http://127.0.0.1:${env.port}`, ...env.corsOrigins]);
@@ -41,13 +41,14 @@ app.use("/api/complaints", createRateLimiter({ windowMs: 10 * 60 * 1000, max: 45
 app.use("/api", apiRoutes);
 app.use(express.static(env.publicDir));
 
-app.get("/health", (_req, res) => {
+app.get("/health", async (_req, res) => {
   const databaseReady = mongoose.connection.readyState === 1;
+  const aiService = await refreshAiServiceConnectionStatus();
   res.status(databaseReady ? 200 : 503).json({
     status: databaseReady ? "ok" : "degraded",
     service: "urban-pulse-web",
     database: databaseReady ? "connected" : "disconnected",
-    aiService: getAiServiceConnectionStatus()
+    aiService
   });
 });
 
@@ -72,6 +73,8 @@ app.use((error, _req, res, _next) => {
       : error.userMessage || error.message || "Unexpected server error";
   res.status(statusCode).json({
     error: safeMessage,
+    requestId: _req.requestId || undefined,
+    failureStage: error.failureStage || (statusCode >= 500 ? "web_api" : undefined),
     code: error.code || undefined,
     deliveryStatus: error.deliveryStatus || undefined,
     retryable: typeof error.retryable === "boolean" ? error.retryable : undefined

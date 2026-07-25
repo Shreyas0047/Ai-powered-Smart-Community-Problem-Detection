@@ -37,10 +37,15 @@ def main():
         authorized_probe = client.post(
             "/auth/probe",
             json={},
-            headers={"X-Urban-Pulse-Service-Token": token},
+            headers={
+                "X-Urban-Pulse-Service-Token": token,
+                "X-Request-ID": "trace-auth-probe-12345",
+            },
         )
         assert authorized_probe.status_code == 200, "Auth probe must accept the configured service token"
         assert authorized_probe.get_json().get("authenticated") is True
+        assert authorized_probe.get_json().get("requestId") == "trace-auth-probe-12345"
+        assert authorized_probe.headers.get("X-Request-ID") == "trace-auth-probe-12345"
 
         authorized = client.post(
             "/transcript/process",
@@ -64,6 +69,7 @@ def main():
             "malformedTokenRejected": True,
             "validTokenAccepted": True,
             "authenticatedProbe": True,
+            "correlationIdPreserved": True,
             "requestSizeBounded": True,
         }, indent=2))
     finally:

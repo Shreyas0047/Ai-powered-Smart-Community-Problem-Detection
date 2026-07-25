@@ -307,7 +307,7 @@ function logAiDecision({ auth, city, location, analysis, confidenceScore, review
   console.info(JSON.stringify(record));
 }
 
-async function createComplaintFromPayload(auth, payload) {
+async function createComplaintFromPayload(auth, payload, context = {}) {
   const city = { ...BENGALURU, slug: BENGALURU.id };
   const location = normalizeLimitedText(payload.location, "Location", MAX_LOCATION_LENGTH);
   const textComplaint = normalizeLimitedText(payload.textComplaint, "Complaint description", MAX_COMPLAINT_TEXT_LENGTH);
@@ -387,7 +387,7 @@ async function createComplaintFromPayload(auth, payload) {
       createdAt: complaint.createdAt,
       ...extractStoredThreatFields(complaint)
     }))
-  });
+  }, context);
   const threatAssessment = applyThreatPriority(analysis);
   analysis.threatAssessment = threatAssessment;
   const weather = await fetchWeatherSnapshot({
@@ -658,7 +658,7 @@ async function createComplaintFromPayload(auth, payload) {
   return { analysis, complaint };
 }
 
-async function analyzeImagePreview(payload = {}) {
+async function analyzeImagePreview(payload = {}, context = {}) {
   const imagePayload = normalizeImagePayload(payload);
   if (!imagePayload.imageBase64) {
     throw createHttpError("Upload an image before requesting visual analysis.", 400);
@@ -679,7 +679,7 @@ async function analyzeImagePreview(payload = {}) {
     iotTriggered: false,
     previousComplaints: [],
     recentAreaComplaints: []
-  });
+  }, context);
 }
 
 function summarizeImageAnalysis(analysis = {}) {
@@ -744,7 +744,10 @@ function summarizeImageAnalysis(analysis = {}) {
     reason,
     provider,
     model: String(cv.model || observations.model || analysis.aiMeta?.visionEngine || "unknown"),
-    fallbackUsed
+    fallbackUsed,
+    requestId: String(analysis.aiMeta?.requestId || ""),
+    failureStage: String(analysis.aiMeta?.upstreamStage || ""),
+    upstreamStatus: String(analysis.aiMeta?.upstreamStatus || "")
   };
 }
 

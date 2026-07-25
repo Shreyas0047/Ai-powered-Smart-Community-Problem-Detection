@@ -8,6 +8,7 @@ async function authenticate(req, _res, next) {
     if (!authHeader.startsWith("Bearer ")) {
       const error = new Error("Missing bearer token");
       error.statusCode = 401;
+      error.failureStage = "web_auth";
       throw error;
     }
 
@@ -22,11 +23,13 @@ async function authenticate(req, _res, next) {
       if (!user || user.disabledAt) {
         const error = new Error("This session is no longer active. Please login again.");
         error.statusCode = 401;
+        error.failureStage = "web_auth";
         throw error;
       }
       if (Number(user.tokenVersion || 0) !== Number(tokenAuth.tokenVersion || 0)) {
         const error = new Error("This session has expired. Please login again.");
         error.statusCode = 401;
+        error.failureStage = "web_auth";
         throw error;
       }
       tokenAuth.username = user.username;
@@ -37,6 +40,7 @@ async function authenticate(req, _res, next) {
     next();
   } catch (error) {
     error.statusCode = error.statusCode || 401;
+    error.failureStage = error.failureStage || "web_auth";
     next(error);
   }
 }
@@ -47,6 +51,7 @@ function requirePermission(permission) {
       if (!req.auth?.permissions?.includes(permission)) {
         const error = new Error("Permission denied");
         error.statusCode = 403;
+        error.failureStage = "web_permission";
         throw error;
       }
       next();

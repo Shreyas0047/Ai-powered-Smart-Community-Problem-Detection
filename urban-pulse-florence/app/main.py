@@ -30,7 +30,14 @@ def authenticated():
     if not REQUIRE_SERVICE_TOKEN:
         return True
     supplied = request.headers.get("X-Urban-Pulse-Vision-Token", "")
-    return bool(SERVICE_TOKEN and supplied and hmac.compare_digest(supplied, SERVICE_TOKEN))
+    try:
+        return bool(
+            SERVICE_TOKEN
+            and supplied
+            and hmac.compare_digest(supplied.encode("utf-8"), SERVICE_TOKEN.encode("utf-8"))
+        )
+    except (UnicodeEncodeError, TypeError):
+        return False
 
 
 @app.after_request
@@ -62,14 +69,14 @@ def analyze():
     request_id = "".join(character for character in request_id if character.isalnum() or character in "-_")[:64]
     if not authenticated():
         log_event("request_rejected", requestId=request_id, reason="authentication")
-        return jsonify({"status": "unauthorized", "reason": "Service authentication failed."}), 401
+        return jsonify({"status": "unauthorized", "reason": "Service authentication failed.", "requestId": request_id}), 401
 
     uploaded = request.files.get("image")
     if uploaded is None:
-        return jsonify({"status": "invalid_image", "reason": "Multipart image field is required."}), 400
+        return jsonify({"status": "invalid_image", "reason": "Multipart image field is required.", "requestId": request_id}), 400
     payload = uploaded.read(MAX_IMAGE_BYTES + 1)
     if len(payload) > MAX_IMAGE_BYTES:
-        return jsonify({"status": "invalid_image", "reason": "Image exceeds the upload limit."}), 413
+        return jsonify({"status": "invalid_image", "reason": "Image exceeds the upload limit.", "requestId": request_id}), 413
 
     image = None
     started = time.monotonic()
@@ -87,6 +94,7 @@ def analyze():
             "structuredObservations": observations,
             "inferenceMs": inference_ms,
             "reason": "",
+            "requestId": request_id,
         }
         log_event(
             "analysis_succeeded",
@@ -98,11 +106,11 @@ def analyze():
         return jsonify(result)
     except ValueError as error:
         log_event("analysis_rejected", requestId=request_id, errorType=type(error).__name__)
-        return jsonify({"status": "invalid_image", "reason": str(error)}), 400
+        return jsonify({"status": "invalid_image", "reason": str(error), "requestId": request_id}), 400
     except Exception as error:
         log_event("analysis_failed", requestId=request_id, errorType=type(error).__name__)
         LOGGER.exception("Visual analysis failed")
-        return jsonify({"status": "unavailable", "reason": "Visual analysis is temporarily unavailable."}), 503
+        return jsonify({"status": "unavailable", "reason": "Visual analysis is temporarily unavailable.", "requestId": request_id}), 503
     finally:
         if image is not None:
             image.close()
