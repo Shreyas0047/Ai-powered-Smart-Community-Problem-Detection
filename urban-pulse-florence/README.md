@@ -24,50 +24,86 @@ docker build -t urban-pulse-florence .
 docker run --rm -p 8080:8080 -e FLORENCE_SERVICE_TOKEN="$(openssl rand -hex 32)" urban-pulse-florence
 ```
 
-## Google Cloud Run deployment
+## AWS EC2 deployment
 
-The initial production profile is deliberately single-concurrency because model inference is memory intensive:
+The current deployment profile is:
 
-- Region: `asia-south1`
-- CPU: `2`
-- Memory: `4Gi`
-- Concurrency: `1`
-- Request timeout: `120s`
-- Minimum instances: `0`
-- Maximum instances: `1` to cap concurrent model cost; raise only after observing real queue demand
+- Region: Asia Pacific (Mumbai), `ap-south-1`
+- Operating system: Ubuntu Server 24.04 LTS, x86_64
+- Instance: `m7i-flex.large`
+- Compute: 2 vCPUs and 8 GiB RAM
+- Storage: 30 GB gp3
+- Container limit: 2 CPUs and 6 GiB RAM
+- Public address: associated Elastic IP
+- Service port: `8080`
 
-The container preloads Florence synchronously before Gunicorn accepts traffic. This is intentional: with request-based CPU and `min-instances=0`, a background warm-up thread can be throttled after the startup request finishes and leave readiness stuck in `loading`.
+The container preloads Florence synchronously before Gunicorn accepts traffic. This prevents the service from reporting ready before the model can process an image.
 
 ```bash
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
-gcloud artifacts repositories create urban-pulse --repository-format=docker --location=asia-south1
-gcloud builds submit --tag asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/urban-pulse/florence-vision:prod
-gcloud run deploy urban-pulse-florence \
-  --image asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/urban-pulse/florence-vision:prod \
-  --region asia-south1 \
-  --platform managed \
-  --cpu 2 \
-  --memory 4Gi \
-  --concurrency 1 \
-  --timeout 120 \
-  --min-instances 0 \
-  --max-instances 1 \
-  --allow-unauthenticated \
-  --set-env-vars FLORENCE_SERVICE_TOKEN=REPLACE_WITH_THE_SAME_LONG_RANDOM_SECRET,FLORENCE_WARMUP=true,REQUIRE_SERVICE_TOKEN=true
+sudo apt update
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
+
+cd ~/urban-pulse-florence
+docker build -t urban-pulse-florence:prod .
 ```
 
-`--allow-unauthenticated` makes the HTTPS route reachable from Render, but `/v1/analyze` remains protected by the application token. Keep the token in Cloud Run and Render environment variables only. Health endpoints contain no secret or image data.
+Create `~/florence.env` and protect it:
+
+```env
+FLORENCE_SERVICE_TOKEN=REPLACE_WITH_A_LONG_RANDOM_SECRET
+REQUIRE_SERVICE_TOKEN=true
+FLORENCE_WARMUP=true
+```
+
+```bash
+chmod 600 ~/florence.env
+
+docker run -d \
+  --name urban-pulse-florence \
+  --restart unless-stopped \
+  --memory 6g \
+  --cpus 2 \
+  --env-file ~/florence.env \
+  -p 8080:8080 \
+  urban-pulse-florence:prod
+```
+
+The EC2 security group must permit the selected source to reach TCP port `8080`. Port `22` should remain restricted to the maintainer's IP. The analysis endpoint remains protected by the application token even though health endpoints are public.
 
 After deployment, verify:
 
 ```bash
-curl -s https://YOUR_CLOUD_RUN_URL/health
-curl -s https://YOUR_CLOUD_RUN_URL/ready
-curl -s -X POST https://YOUR_CLOUD_RUN_URL/v1/analyze \
+curl -s http://ELASTIC_IP:8080/health
+curl -s http://ELASTIC_IP:8080/ready
+curl -s -X POST http://ELASTIC_IP:8080/v1/analyze \
   -H "X-Urban-Pulse-Vision-Token: YOUR_SECRET" \
   -F "image=@test-incident.jpg"
 ```
 
 Do not connect Render until `/ready` returns `200` and the authenticated smoke test returns `schemaVersion: "1.0"`.
+
+Configure the Render AI service with:
+
+```env
+FLORENCE_REMOTE_ENABLED=true
+FLORENCE_SERVICE_URL=http://ELASTIC_IP:8080
+FLORENCE_SERVICE_TOKEN=THE_SAME_SECRET_AS_EC2
+FLORENCE_ALLOW_HTTP=true
+FLORENCE_TIMEOUT_SECONDS=80
+FLORENCE_MAX_RETRIES=0
+FLORENCE_ENABLED=false
+FLORENCE_WARMUP=false
+```
+
+Direct HTTP is suitable only for the current controlled college demonstration. It does not encrypt images or the service token in transit. Add HTTPS before broader use and then set `FLORENCE_ALLOW_HTTP=false`.
+
+## Operations
+
+```bash
+docker ps
+docker logs --tail 200 urban-pulse-florence
+docker restart urban-pulse-florence
+```
+
+Stopping the EC2 instance stops compute billing, although storage and public IPv4 charges may remain. Starting the instance again restores the container through `--restart unless-stopped`; wait for `/ready` before testing an image.

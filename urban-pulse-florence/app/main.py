@@ -127,7 +127,6 @@ def warm_model():
 if REQUIRE_SERVICE_TOKEN and not SERVICE_TOKEN:
     LOGGER.warning("FLORENCE_SERVICE_TOKEN is missing; protected analysis requests will be rejected")
 if WARMUP:
-    # Cloud Run may throttle background CPU after startup when min-instances is
-    # zero. Preload synchronously so a worker never advertises readiness while
-    # its model is still waiting for CPU.
+    # Preload synchronously so a worker never advertises readiness while its
+    # model is still loading.
     warm_model()

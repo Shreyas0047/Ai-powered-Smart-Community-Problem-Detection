@@ -80,7 +80,7 @@ flowchart LR
     API --> DB[(MongoDB Atlas)]
     API --> AI[Flask AI Service]
     AI --> Vision[Visual Provider Chain]
-    Vision --> Florence[Florence-2<br/>Cloud Run]
+    Vision --> Florence[Florence-2<br/>AWS EC2]
     AI --> Decision[Urban Pulse<br/>Decision Engine]
     Decision --> API
     API --> Route[Bengaluru Routing]
@@ -96,7 +96,7 @@ flowchart LR
 | Browser UI | Authentication, reporting, image preparation, dashboards, maps, verification, and accessible feedback |
 | Express API | Authentication, validation, persistence, quotas, routing, authority workflow, email, reports, and permissions |
 | Flask AI service | Provider orchestration, multimodal fusion, confidence calibration, threat reasoning, and human-review gates |
-| Florence Cloud Run | Sanitized image perception only; it cannot route, prioritize, accept, or close complaints |
+| Florence on AWS EC2 | Sanitized image perception only; it cannot route, prioritize, accept, or close complaints |
 | MongoDB Atlas | Users, OTP state, complaints, audits, clusters, commands, tickets, quotas, and operational history |
 
 ### Complaint Lifecycle
@@ -143,10 +143,10 @@ Images are validated, resized, compressed, and hashed before external processing
 | Frontend | Semantic HTML, CSS, JavaScript, React 19 bridge, liquid-glass-react |
 | API | Node.js, Express, Mongoose, JWT |
 | AI | Python 3.11, Flask, sentence-transformers, structured vision provider chain |
-| Vision | Florence-2 container, PyTorch CPU, Google Cloud Run |
+| Vision | Florence-2 container, PyTorch CPU, AWS EC2 |
 | Data | MongoDB Atlas |
 | Integrations | Deepgram, Nodemailer/SMTP, Weatherstack, Zenserp, Nominatim |
-| Deployment | Render, Google Cloud Build, Artifact Registry, Cloud Run |
+| Deployment | Render and AWS EC2 |
 
 ## Project Layout
 
@@ -155,7 +155,7 @@ Urban-Pulse-Ai/
 ├── public/                  Browser application and visual assets
 ├── src/                     Express API, models, middleware, and services
 ├── ai_service/              Flask civic-intelligence service
-├── urban-pulse-florence/    Independent Florence-2 Cloud Run container
+├── urban-pulse-florence/    Independent Florence-2 AWS EC2 container
 ├── shared/                  Versioned category contract
 ├── dataset/benchmark/       Evaluation dataset and manifests
 ├── scripts/                 Verification, evaluation, and seed tools
@@ -242,16 +242,15 @@ These variables belong to the **Flask AI service**, not the browser:
 
 | Variable | Recommended value |
 | --- | --- |
-| <code>VISION_PROVIDER_ORDER</code> | <code>florence,gemini</code> |
 | <code>FLORENCE_REMOTE_ENABLED</code> | <code>true</code> |
-| <code>FLORENCE_SERVICE_URL</code> | Remote Florence service URL |
+| <code>FLORENCE_SERVICE_URL</code> | AWS Florence base URL, without <code>/v1/analyze</code> |
 | <code>FLORENCE_ALLOW_HTTP</code> | Keep <code>false</code>; use <code>true</code> only for an explicitly accepted IP-based test deployment |
-| <code>FLORENCE_SERVICE_TOKEN</code> | Same long secret configured on the remote Florence service |
-| <code>FLORENCE_TIMEOUT_SECONDS</code> | <code>50</code> |
-| <code>FLORENCE_MAX_RETRIES</code> | <code>1</code> |
+| <code>FLORENCE_SERVICE_TOKEN</code> | Same long secret configured in EC2 <code>~/florence.env</code> |
+| <code>FLORENCE_TIMEOUT_SECONDS</code> | <code>80</code> for the current CPU deployment |
+| <code>FLORENCE_MAX_RETRIES</code> | <code>0</code> to remain inside the web request deadline |
 | <code>FLORENCE_ENABLED</code> | <code>false</code> on memory-limited Render instances |
 
-The Cloud Run container preloads Florence before accepting traffic. <code>min-instances=0</code> reduces idle cost but permits a first-request cold start; <code>min-instances=1</code> reduces latency and adds idle cost.
+The EC2 container preloads Florence before Gunicorn accepts traffic. Once <code>/ready</code> returns <code>200</code>, image requests do not incur a model cold start unless the instance or container is restarted. The container uses <code>--restart unless-stopped</code> so it returns automatically after an EC2 restart.
 
 ### Optional Providers
 
@@ -282,7 +281,9 @@ Set <code>AUTHORITY_ADAPTER</code> to <code>disabled</code>, <code>email</code>,
 - Generate unique <code>JWT_SECRET</code>, <code>AI_SERVICE_TOKEN</code>, and <code>FLORENCE_SERVICE_TOKEN</code> values.
 - Keep <code>ALLOW_ROLE_TOKEN_ISSUE=false</code>.
 - Keep <code>FLORENCE_ENABLED=false</code> on the Render AI service.
-- Configure identical Florence service tokens in Render and Cloud Run.
+- Configure identical Florence service tokens in Render and EC2 <code>~/florence.env</code>.
+- Keep the EC2 Elastic IP associated with the instance.
+- Expose only the port required by the selected transport.
 - Restrict <code>CORS_ORIGIN</code> to the deployed frontend.
 - Use a Gmail app password or a transactional SMTP provider.
 - Verify <code>/health</code> and <code>/ready</code> for all deployed services.
@@ -338,38 +339,42 @@ Create both services, set all <code>sync: false</code> secrets in the Render das
 
 The web <code>/health</code> endpoint performs a cached live AI authentication probe and reports its status, latency, last success, request ID, and failure stage without exposing secrets. Image-analysis requests preserve the same <code>X-Request-ID</code> through the browser, Express, Flask, and the selected visual provider. When an upload fails, use the reference shown in the report UI to locate matching structured logs. Failure stages distinguish browser transport, web authentication, web-to-AI transport, AI authentication, payload validation, and provider execution.
 
-### Florence On Cloud Run
+### Florence On AWS EC2
 
 ~~~bash
 cd urban-pulse-florence
 
-gcloud builds submit \
-  --tag asia-south1-docker.pkg.dev/PROJECT_ID/urban-pulse/florence-vision:prod
+docker build -t urban-pulse-florence:prod .
 
-gcloud run deploy urban-pulse-florence \
-  --image asia-south1-docker.pkg.dev/PROJECT_ID/urban-pulse/florence-vision:prod \
-  --region asia-south1 \
-  --cpu 2 \
-  --memory 4Gi \
-  --concurrency 1 \
-  --timeout 120 \
-  --min-instances 0 \
-  --max-instances 1 \
-  --startup-cpu-boost \
-  --allow-unauthenticated \
-  --set-env-vars FLORENCE_SERVICE_TOKEN=REPLACE_ME,FLORENCE_WARMUP=true,REQUIRE_SERVICE_TOKEN=true
+docker run -d \
+  --name urban-pulse-florence \
+  --restart unless-stopped \
+  --memory 6g \
+  --cpus 2 \
+  --env-file ~/florence.env \
+  -p 8080:8080 \
+  urban-pulse-florence:prod
 ~~~
 
-<code>--allow-unauthenticated</code> only exposes the HTTPS route. <code>/v1/analyze</code> still requires the shared application token.
+The current college-project deployment uses Ubuntu 24.04 on an <code>m7i-flex.large</code> instance in <code>ap-south-1</code>, 30 GB gp3 storage, and an associated Elastic IP. EC2 port <code>8080</code> is reachable for Render integration, while <code>/v1/analyze</code> remains protected by <code>X-Urban-Pulse-Vision-Token</code>.
 
 Verify before connecting Render:
 
 ~~~bash
-curl https://YOUR_CLOUD_RUN_URL/health
-curl https://YOUR_CLOUD_RUN_URL/ready
+curl http://ELASTIC_IP:8080/health
+curl http://ELASTIC_IP:8080/ready
+
+curl -X POST http://ELASTIC_IP:8080/v1/analyze \
+  -H "X-Urban-Pulse-Vision-Token: YOUR_SECRET" \
+  -F "image=@test-incident.jpg"
 ~~~
 
-See [urban-pulse-florence/README.md](urban-pulse-florence/README.md) for the authenticated image smoke test and container details.
+Set the Render AI service to use the EC2 URL, enable remote Florence, disable local Florence loading, and use the same service token. The current direct-IP connection requires <code>FLORENCE_ALLOW_HTTP=true</code>.
+
+> [!CAUTION]
+> Direct HTTP is an explicit temporary testing compromise: images and the service token are not transport-encrypted. A public deployment should place HTTPS in front of EC2 and restore <code>FLORENCE_ALLOW_HTTP=false</code>.
+
+See [urban-pulse-florence/README.md](urban-pulse-florence/README.md) for instance setup, container operations, and authenticated verification.
 
 ## API Surface
 
@@ -414,7 +419,7 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 ## Operational Notes
 
 - **OTP not received:** verify SMTP credentials, Gmail app password, sender identity, and <code>SMTP_FAMILY=4</code>; failed delivery never reports success.
-- **Image analysis unavailable:** check the Flask service, Cloud Run <code>/ready</code>, shared token equality, revision logs, and cold-start timing. Re-submit Image retries the retained photo.
+- **Image analysis unavailable:** check the Flask service, AWS EC2 <code>/ready</code>, security-group port, container logs, and shared token equality. Re-submit Image retries the retained photo.
 - **Provider quota reached:** weather and civic-search providers return unavailable snapshots while complaint creation continues.
 - **Authority delivery failed:** inspect the authority ticket attempt history and retry only when its retry window opens.
 - **Unclear image:** request better evidence or use human review; never reinterpret low-confidence observations as confirmed facts.
@@ -452,7 +457,7 @@ Contributions must not expose reporter information, move civic decisions into an
 
 ## License
 
-Released under the MIT license as declared in [package.json](package.json).
+Project source code is released under the MIT license as declared in [package.json](package.json). Third-party regression media under `dataset/` retains its original Creative Commons terms; see [dataset/ATTRIBUTION.md](dataset/ATTRIBUTION.md).
 
 <p align="center">
   <img src="public/urban-pulse-logo-transparent.png" alt="Urban Pulse AI" width="210" />

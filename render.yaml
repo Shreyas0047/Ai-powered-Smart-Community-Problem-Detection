@@ -21,10 +21,12 @@ services:
         sync: false
       - key: FLORENCE_SERVICE_TOKEN
         sync: false
+      - key: FLORENCE_ALLOW_HTTP
+        sync: false
       - key: FLORENCE_TIMEOUT_SECONDS
-        value: "50"
+        value: "80"
       - key: FLORENCE_MAX_RETRIES
-        value: "1"
+        value: "0"
       - key: FLORENCE_REMOTE_CACHE_SIZE
         value: "128"
       - key: FLORENCE_CIRCUIT_FAILURE_THRESHOLD
@@ -42,7 +44,7 @@ services:
       - key: GEMINI_TIMEOUT_SECONDS
         value: "25"
       - key: GEMINI_MAX_RETRIES
-        value: "1"
+        value: "0"
       - key: GEMINI_RATE_LIMIT_PER_MINUTE
         value: "10"
       - key: GEMINI_CACHE_SIZE
@@ -51,7 +53,7 @@ services:
         value: "1280"
       - key: GEMINI_MAX_TRANSMIT_BYTES
         value: "1500000"
-      # Florence runs on Cloud Run. Never load its weights into this Render service.
+      # Florence runs on AWS EC2. Never load its weights into this Render service.
       - key: FLORENCE_ENABLED
         value: "false"
       - key: FLORENCE_MODEL_NAME
@@ -109,7 +111,7 @@ services:
       - key: AI_SERVICE_TOKEN
         sync: false
       - key: AI_SERVICE_TIMEOUT_MS
-        value: "110000"
+        value: "120000"
       - key: DEEPGRAM_API_KEY
         sync: false
       - key: DEEPGRAM_MODEL
