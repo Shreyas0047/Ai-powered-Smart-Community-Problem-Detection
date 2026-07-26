@@ -29,6 +29,7 @@ const imageAnalysisProgressFill = document.getElementById("imageAnalysisProgress
 const imageAnalysisProgressDetail = document.getElementById("imageAnalysisProgressDetail");
 const previewLocationBtn = document.getElementById("previewLocationBtn");
 const useLiveLocationBtn = document.getElementById("useLiveLocationBtn");
+const checkWeatherBtn = document.getElementById("checkWeatherBtn");
 const weatherPreviewPanel = document.getElementById("weatherPreviewPanel");
 const weatherPreviewTitle = document.getElementById("weatherPreviewTitle");
 const weatherPreviewBadge = document.getElementById("weatherPreviewBadge");
@@ -132,6 +133,11 @@ const complaintDetailOverlay = document.getElementById("complaintDetailOverlay")
 const closeComplaintDetailBtn = document.getElementById("closeComplaintDetailBtn");
 const complaintDetailTitle = document.getElementById("complaintDetailTitle");
 const complaintDetailBody = document.getElementById("complaintDetailBody");
+const locationPreviewOverlay = document.getElementById("locationPreviewOverlay");
+const locationPreviewFrame = document.getElementById("locationPreviewFrame");
+const locationPreviewTitle = document.getElementById("locationPreviewTitle");
+const locationPreviewCaption = document.getElementById("locationPreviewCaption");
+const closeLocationPreviewBtn = document.getElementById("closeLocationPreviewBtn");
 
 const storageKey = "smart-community-auth";
 const draftStorageKey = "smart-community-report-draft-v1";
@@ -168,6 +174,7 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (dialog === faqOverlay) closeFaqOverlay();
     if (dialog === complaintDetailOverlay) closeComplaintDetailOverlay();
+    if (dialog === locationPreviewOverlay) closeLocationPreview();
     return;
   }
   if (event.key !== "Tab") return;
@@ -1583,17 +1590,34 @@ async function reverseGeocodeLiveLocation(latitude, longitude) {
 
 function showTypedLocationOnMap() {
   const location = reportLocationInput.value.trim();
-
-  updateLiveLocationMap(location);
-  if (!location) {
+  if (!location && !currentReportMapLocation) {
+    setDashboardMessage("Add a location before opening the map preview.", "error");
     return;
   }
 
-  requestWeatherPreview();
-  activateAppView("map");
+  const mapQuery = currentReportMapLocation
+    ? `${currentReportMapLocation.lat},${currentReportMapLocation.lng}`
+    : location;
+  updateLiveLocationMap(location || "Current location", mapQuery);
+  locationPreviewTitle.textContent = location || "Current location";
+  locationPreviewCaption.textContent = `Map preview for ${location || "the selected coordinates"}. Close this window to continue the report.`;
+  locationPreviewFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
+  locationPreviewOverlay.hidden = false;
+  document.body.classList.add("auth-open");
+  focusDialog(locationPreviewOverlay);
 }
 
-function resetWeatherPreview(message = "Conditions are checked when you finish entering a location, show it on the map, or use live location.") {
+function closeLocationPreview() {
+  if (!locationPreviewOverlay || locationPreviewOverlay.hidden) return;
+  locationPreviewOverlay.hidden = true;
+  locationPreviewFrame.removeAttribute("src");
+  restoreDialogFocus(locationPreviewOverlay);
+  if (authOverlay?.hidden !== false && faqOverlay?.hidden !== false && complaintDetailOverlay?.hidden !== false) {
+    document.body.classList.remove("auth-open");
+  }
+}
+
+function resetWeatherPreview(message = "Add a location, then press Check Weather to retrieve current conditions.") {
   weatherPreviewRequestId += 1;
   lastWeatherPreviewLocation = "";
   activeWeatherPreviewLocation = "";
@@ -1661,6 +1685,7 @@ async function requestWeatherPreview() {
   }
   const requestId = ++weatherPreviewRequestId;
   activeWeatherPreviewLocation = locationKey;
+  checkWeatherBtn.disabled = true;
   weatherPreviewPanel.dataset.state = "loading";
   weatherPreviewTitle.textContent = "Checking current conditions";
   weatherPreviewBadge.textContent = "Checking";
@@ -1688,6 +1713,10 @@ async function requestWeatherPreview() {
     weatherPreviewBadge.textContent = "Unavailable";
     weatherPreviewMetrics.hidden = true;
     weatherPreviewNote.textContent = error.message || "The complaint can still be submitted without current conditions.";
+  } finally {
+    if (requestId === weatherPreviewRequestId) {
+      checkWeatherBtn.disabled = false;
+    }
   }
 }
 
@@ -1720,7 +1749,6 @@ function useLiveLocation() {
       updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
       setDashboardMessage("Live location added to the report form.", "success");
       useLiveLocationBtn.disabled = false;
-      requestWeatherPreview();
     },
     (error) => {
       const message =
@@ -5353,15 +5381,16 @@ reportLocationInput.addEventListener("input", (event) => {
   updateLiveLocationMap(event.target.value);
   const currentLocationKey = `${event.target.value.trim()}||`;
   if (lastWeatherPreviewLocation && lastWeatherPreviewLocation !== currentLocationKey) {
-    resetWeatherPreview("Location changed. Finish entering it to check the new conditions.");
+    resetWeatherPreview("Location changed. Press Check Weather to retrieve the new conditions.");
   }
 });
-reportLocationInput.addEventListener("blur", (event) => {
-  if (event.relatedTarget === previewLocationBtn || event.relatedTarget === useLiveLocationBtn) return;
-  if (reportLocationInput.value.trim()) requestWeatherPreview();
-});
 previewLocationBtn.addEventListener("click", showTypedLocationOnMap);
+checkWeatherBtn?.addEventListener("click", requestWeatherPreview);
 useLiveLocationBtn?.addEventListener("click", useLiveLocation);
+closeLocationPreviewBtn?.addEventListener("click", closeLocationPreview);
+locationPreviewOverlay?.addEventListener("click", (event) => {
+  if (event.target === locationPreviewOverlay) closeLocationPreview();
+});
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();

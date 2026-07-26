@@ -82,7 +82,7 @@ This section maps the implemented software features to their purpose and is suit
 - **Image preview analysis:** Citizens see the visible incident, scene description, hazards, evidence confidence, image quality, text-image consistency, and review recommendation before submission.
 - **Retry without re-uploading:** If visual analysis is delayed or unavailable, **Re-submit Image** retries the retained prepared image.
 - **Local draft recovery:** In-progress report text and location are saved in browser storage and can be restored after navigation or refresh.
-- **Map and weather preview:** A typed or live location can be opened on the map and checked for current condition, temperature, rainfall, humidity, and wind.
+- **Map and weather preview:** **Show Map** opens an in-page location dialog without leaving the report, while **Check Weather** explicitly retrieves current condition, temperature, rainfall, humidity, and wind for a typed or live location.
 - **Weather-sensitive guidance:** Rain and wind context can add cautious guidance for drainage, flooding, sewage, electrical, fire, fallen-tree, road, vehicle, and water-leak complaints.
 - **Inline submission progress:** The form reports evidence analysis, hazard review, ward selection, department routing, official-reference lookup, public-context lookup, persistence, and completion without opening a separate result window.
 - **Portable complaint record:** After submission, users can generate a PDF, email the authority, and notify up to five chosen contacts.
@@ -130,7 +130,7 @@ This section maps the implemented software features to their purpose and is suit
 
 <p align="center"><sub>Screenshot placeholder: add the final reporting screen at <code>report.png</code> in the repository root.</sub></p>
 
-The report workspace provides immediate image-analysis states, a failure-only **Re-submit Image** action, browser-geolocation support, map preview, local weather conditions, draft recovery, voice transcription, inline submission progress, and a unified result panel. The result includes the selected ward and authority, conditions at submission, verified civic references, public context, and report actions. Complaint details use a responsive modal workspace for routing, evidence, verification, authority status, timelines, public context, weather, threat assessment, resolution, and human review.
+The report workspace provides immediate image-analysis states, a failure-only **Re-submit Image** action, browser-geolocation support, an in-page map dialog, explicit local-weather lookup, draft recovery, voice transcription, inline submission progress, and a unified result panel. The result includes the selected ward and authority, conditions at submission, verified civic references, public context, and report actions. Complaint details use a responsive modal workspace for routing, evidence, verification, authority status, timelines, public context, weather, threat assessment, resolution, and human review.
 
 ## Architecture
 
@@ -335,7 +335,7 @@ The EC2 container preloads Florence before Gunicorn accepts traffic. Once <code>
 | <code>ZENSERP_OFFICIAL_CACHE_HOURS=168</code> | Reuse department and ward reference searches |
 | <code>ZENSERP_PUBLIC_CACHE_HOURS=6</code> | Reuse recent area and category context |
 
-The report form shows current local conditions after a Bengaluru location is completed, mapped, or obtained through browser geolocation. Complaint submission reuses the server-side observation and only fetches uncached weather for weather-sensitive incidents. Civic search runs after ward and department routing: official references are checked for every routed complaint, while recent public context is limited to higher-risk or relevant categories. Cached results do not consume monthly provider allowance, and provider quota or failure never prevents complaint submission.
+The report form shows current local conditions when the user explicitly presses **Check Weather** after entering or obtaining a Bengaluru location. Complaint submission reuses the server-side observation and only fetches uncached weather for weather-sensitive incidents. Civic search runs after ward and department routing: official references are checked for every routed complaint, while recent public context is limited to higher-risk or relevant categories. Cached results do not consume monthly provider allowance, and provider quota or failure never prevents complaint submission.
 
 ### Authority Adapter
 

@@ -74,9 +74,19 @@ assert.ok(
 assert.match(civicEvidenceService, /zenserpOfficialCacheHours/);
 assert.match(civicEvidenceService, /zenserpPublicCacheHours/);
 assert.match(markup, /id="weatherPreviewPanel"/);
+assert.match(markup, /id="checkWeatherBtn"/);
+assert.match(markup, /id="locationPreviewOverlay"[\s\S]*role="dialog"/);
+assert.match(markup, /id="closeLocationPreviewBtn"/);
 assert.match(markup, /id="externalContextUsagePanel"/);
 assert.match(frontend, /Checking official civic references/);
 assert.match(frontend, /Related public context/);
+assert.match(frontend, /checkWeatherBtn\?\.addEventListener\("click", requestWeatherPreview\)/);
+assert.doesNotMatch(frontend, /reportLocationInput\.addEventListener\("blur"[\s\S]{0,240}requestWeatherPreview/);
+const mapPreviewStart = frontend.indexOf("function showTypedLocationOnMap()");
+const mapPreviewEnd = frontend.indexOf("function closeLocationPreview()", mapPreviewStart);
+const mapPreviewFunction = frontend.slice(mapPreviewStart, mapPreviewEnd);
+assert.match(mapPreviewFunction, /locationPreviewOverlay\.hidden = false/);
+assert.doesNotMatch(mapPreviewFunction, /activateAppView\("map"\)/);
 
 console.log(JSON.stringify({
   passed: true,

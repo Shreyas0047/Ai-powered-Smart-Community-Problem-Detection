@@ -509,6 +509,7 @@
                     <div class="location-input-row">
                       <input type="text" id="reportLocation" name="location" placeholder="Whitefield, Bengaluru or a nearby street" />
                       <button type="button" id="useLiveLocationBtn" class="secondary-button">Live Location</button>
+                      <button type="button" id="checkWeatherBtn" class="secondary-button">Check Weather</button>
                       <button type="button" id="previewLocationBtn" class="chip-button inline-map-button">Show Map</button>
                     </div>
                   </label>
@@ -522,7 +523,7 @@
                       <span id="weatherPreviewBadge" class="weather-preview-badge">Not checked</span>
                     </div>
                     <div id="weatherPreviewMetrics" class="weather-preview-metrics" hidden></div>
-                    <p id="weatherPreviewNote" class="helper-text">Conditions are checked when you finish entering a location, show it on the map, or use live location.</p>
+                    <p id="weatherPreviewNote" class="helper-text">Add a location, then press Check Weather to retrieve current conditions.</p>
                   </section>
 
                   <label>
@@ -948,6 +949,26 @@
           <button type="button" id="closeComplaintDetailBtn" class="chip-button post-submit-close" aria-label="Close complaint details">×</button>
         </div>
         <div id="complaintDetailBody" class="complaint-detail-body"></div>
+      </div>
+    </section>
+
+    <section id="locationPreviewOverlay" class="overlay-shell location-preview-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="locationPreviewTitle">
+      <div class="overlay-panel location-preview-modal">
+        <div class="overlay-head">
+          <div>
+            <p class="eyebrow">Location preview</p>
+            <h2 id="locationPreviewTitle">Complaint location</h2>
+          </div>
+          <button type="button" id="closeLocationPreviewBtn" class="chip-button" aria-label="Close location preview">×</button>
+        </div>
+        <iframe
+          id="locationPreviewFrame"
+          class="location-preview-frame"
+          title="Complaint location map preview"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
+        <p id="locationPreviewCaption" class="helper-text"></p>
       </div>
     </section>
 

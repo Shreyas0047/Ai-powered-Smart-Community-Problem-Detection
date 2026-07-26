@@ -2383,6 +2383,41 @@ textarea {
   background: #05070a;
 }
 
+.location-preview-modal {
+  width: min(980px, 100%);
+  overflow: hidden;
+}
+
+.location-preview-frame {
+  display: block;
+  width: 100%;
+  height: min(66vh, 620px);
+  min-height: 380px;
+  border: 1px solid rgba(205, 218, 245, 0.12);
+  border-radius: 16px;
+  background: #05070a;
+}
+
+.location-preview-modal > .helper-text {
+  margin: 12px 2px 0;
+}
+
+@media (max-width: 640px) {
+  .location-preview-overlay {
+    padding: 10px;
+  }
+
+  .location-preview-modal {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .location-preview-frame {
+    height: 62vh;
+    min-height: 320px;
+  }
+}
+
 .page-footer {
   margin: 0 24px 32px;
   padding: 24px 28px;
