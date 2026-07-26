@@ -134,8 +134,6 @@ services:
         value: "true"
       - key: ZENSERP_MONTHLY_LIMIT
         value: "48"
-      - key: ZENSERP_OFFICIAL_CACHE_HOURS
-        value: "168"
       - key: ZENSERP_PUBLIC_CACHE_HOURS
         value: "6"
       - key: SMTP_HOST

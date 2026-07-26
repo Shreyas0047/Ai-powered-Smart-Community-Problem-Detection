@@ -595,6 +595,19 @@
                     <p id="imageAnalysisProgressDetail" class="helper-text">Validating and preparing the selected evidence.</p>
                   </section>
 
+                  <section id="civicContextPanel" class="weather-preview-panel civic-context-panel" data-state="locked" aria-live="polite">
+                    <div class="weather-preview-head">
+                      <div>
+                        <span class="field-label">Civic context</span>
+                        <strong id="civicContextTitle">Complete image analysis first</strong>
+                      </div>
+                      <span id="civicContextBadge" class="weather-preview-badge">Locked</span>
+                    </div>
+                    <button type="button" id="checkCivicContextBtn" class="secondary-button" disabled>Check Civic Context</button>
+                    <p id="civicContextNote" class="helper-text">After image analysis, check relevant official resources and recent public updates for this location.</p>
+                    <div id="civicContextResults" class="civic-context-results" hidden></div>
+                  </section>
+
                   <div class="form-actions">
                     <button type="submit" id="complaintSubmitBtn" class="light-beam-button gradient-button">Submit Report</button>
                     <button type="button" id="generatePdfBtn" class="secondary-button" disabled>Generate PDF</button>

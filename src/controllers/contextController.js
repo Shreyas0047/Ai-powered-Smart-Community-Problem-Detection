@@ -3,6 +3,8 @@ const env = require("../config/env");
 const { geocodeLocation, isWithinCityEnvelope } = require("../services/complaintService");
 const { getMonthlyQuotaUsage } = require("../services/monthlyQuotaService");
 const { fetchWeatherSnapshot } = require("../services/weatherService");
+const { fetchCivicEvidencePreview } = require("../services/civicEvidenceService");
+const { issueDraftContext, readDraftContext } = require("../services/draftContextService");
 
 const MAX_LOCATION_LENGTH = 240;
 
@@ -94,9 +96,70 @@ async function previewWeather(req, res, next) {
       analysis: { aiMeta: { categoryId } },
       force: true
     });
+    const contextToken = weather.status === "available"
+      ? await issueDraftContext({
+          auth: req.auth,
+          type: "weather",
+          location: input.location,
+          mapLocation: input.mapLocation,
+          payload: weather
+        })
+      : "";
 
     res.json({
-      weather: publicWeatherSnapshot(weather)
+      weather: publicWeatherSnapshot(weather),
+      contextToken
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+function publicCivicEvidence(evidence = {}) {
+  const rawReason = String(evidence.reason || "");
+  const reason =
+    /monthly zenserp quota/i.test(rawReason)
+      ? "Monthly civic-search allowance reached. The complaint can still be submitted."
+      : /api key|disabled|zenserp/i.test(rawReason)
+        ? "Civic context is temporarily unavailable."
+        : rawReason;
+  return {
+    status: evidence.status,
+    reason,
+    officialSources: Array.isArray(evidence.officialSources) ? evidence.officialSources : [],
+    publicContext: Array.isArray(evidence.publicContext) ? evidence.publicContext : []
+  };
+}
+
+async function previewCivicContext(req, res, next) {
+  try {
+    const input = normalizePreviewInput(req.body);
+    const imageAnalysis = await readDraftContext({
+      auth: req.auth,
+      token: req.body.imageAnalysisToken,
+      type: "image_analysis"
+    });
+    if (!imageAnalysis) {
+      throw createHttpError("Complete image analysis before checking civic context.");
+    }
+
+    const evidence = await fetchCivicEvidencePreview({
+      analysis: imageAnalysis,
+      location: input.location
+    });
+    const contextToken = evidence.status === "available"
+      ? await issueDraftContext({
+          auth: req.auth,
+          type: "civic_evidence",
+          location: input.location,
+          mapLocation: input.mapLocation,
+          payload: evidence
+        })
+      : "";
+
+    res.json({
+      civicEvidence: publicCivicEvidence(evidence),
+      contextToken
     });
   } catch (error) {
     next(error);
@@ -132,6 +195,8 @@ module.exports = {
   getExternalContextUsage,
   inferWeatherCategory,
   normalizePreviewInput,
+  previewCivicContext,
   previewWeather,
+  publicCivicEvidence,
   publicWeatherSnapshot
 };

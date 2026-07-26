@@ -4,8 +4,10 @@ const path = require("path");
 const {
   inferWeatherCategory,
   normalizePreviewInput,
+  publicCivicEvidence,
   publicWeatherSnapshot
 } = require("../src/controllers/contextController");
+const { locationFingerprint } = require("../src/services/draftContextService");
 const {
   buildWeatherCacheKey,
   isWeatherRelevant
@@ -49,6 +51,15 @@ const publicSnapshot = publicWeatherSnapshot({
 assert.strictEqual(publicSnapshot.provider, undefined);
 assert.strictEqual(publicSnapshot.quota, undefined);
 assert.strictEqual(publicSnapshot.cached, true);
+assert.strictEqual(
+  locationFingerprint("Indiranagar, Bengaluru", null),
+  locationFingerprint("Indiranagar, Bengaluru, Karnataka, India", null),
+  "Draft context must remain valid when the backend adds the Bengaluru location suffix."
+);
+assert.strictEqual(
+  publicCivicEvidence({ status: "quota_exceeded", reason: "Monthly Zenserp quota reached." }).reason,
+  "Monthly civic-search allowance reached. The complaint can still be submitted."
+);
 
 assert.strictEqual(isOfficialLooking({ url: "https://site.bbmp.gov.in/department" }), true);
 assert.strictEqual(isOfficialLooking({ url: "https://bbmp.gov.in.example.com/not-official" }), false);
@@ -62,35 +73,51 @@ const weatherService = read("src/services/weatherService.js");
 const civicEvidenceService = read("src/services/civicEvidenceService.js");
 
 assert.match(routes, /\/context\/weather-preview/);
+assert.match(routes, /\/context\/civic-preview/);
 assert.match(routes, /\/context\/usage/);
 assert.match(routes, /requirePermission\("view_dashboard"\), getExternalContextUsage/);
 assert.match(app, /keyPrefix: "weather-preview"/);
+assert.match(app, /keyPrefix: "civic-preview"/);
 assert.match(weatherService, /getCachedExternalContext/);
 assert.match(weatherService, /setCachedExternalContext/);
 assert.ok(
   weatherService.indexOf("getCachedExternalContext") < weatherService.indexOf("reserveMonthlyQuota({"),
   "Weather cache must be checked before monthly quota is reserved."
 );
-assert.match(civicEvidenceService, /zenserpOfficialCacheHours/);
 assert.match(civicEvidenceService, /zenserpPublicCacheHours/);
+assert.match(civicEvidenceService, /fetchCivicEvidencePreview/);
 assert.match(markup, /id="weatherPreviewPanel"/);
 assert.match(markup, /id="checkWeatherBtn"/);
+assert.match(markup, /id="checkCivicContextBtn"[\s\S]*disabled/);
+assert.match(markup, /id="civicContextPanel"/);
 assert.match(markup, /id="locationPreviewOverlay"[\s\S]*role="dialog"/);
 assert.match(markup, /id="closeLocationPreviewBtn"/);
 assert.match(markup, /id="externalContextUsagePanel"/);
-assert.match(frontend, /Checking official civic references/);
-assert.match(frontend, /Related public context/);
+assert.match(frontend, /Checking civic context/);
+assert.match(frontend, /Area updates/);
 assert.match(frontend, /checkWeatherBtn\?\.addEventListener\("click", requestWeatherPreview\)/);
+assert.match(frontend, /checkCivicContextBtn\?\.addEventListener\("click", requestCivicContextPreview\)/);
+assert.match(frontend, /imageAnalysisToken: currentImageAnalysisToken/);
+assert.match(frontend, /payload\.weatherContextToken = currentWeatherContextToken/);
+assert.match(frontend, /payload\.civicContextToken = currentCivicContextToken/);
 assert.doesNotMatch(frontend, /reportLocationInput\.addEventListener\("blur"[\s\S]{0,240}requestWeatherPreview/);
 const mapPreviewStart = frontend.indexOf("function showTypedLocationOnMap()");
 const mapPreviewEnd = frontend.indexOf("function closeLocationPreview()", mapPreviewStart);
 const mapPreviewFunction = frontend.slice(mapPreviewStart, mapPreviewEnd);
 assert.match(mapPreviewFunction, /locationPreviewOverlay\.hidden = false/);
 assert.doesNotMatch(mapPreviewFunction, /activateAppView\("map"\)/);
+const complaintService = read("src/services/complaintService.js");
+assert.doesNotMatch(complaintService, /fetchWeatherSnapshot/);
+assert.doesNotMatch(complaintService, /fetchCivicEvidence/);
+assert.match(complaintService, /Weather was not checked before submission/);
+assert.match(complaintService, /Civic context was not checked before submission/);
 
 console.log(JSON.stringify({
   passed: true,
   weatherPreview: true,
+  civicPreviewAfterImageAnalysis: true,
+  submissionProviderCalls: false,
+  serverOwnedDraftSnapshots: true,
   cacheReuse: true,
   bengaluruValidation: true,
   officialDomainValidation: true,

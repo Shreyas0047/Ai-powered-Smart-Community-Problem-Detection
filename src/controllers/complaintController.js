@@ -21,6 +21,7 @@ const {
 const { applyHumanReview, getReviewOptions, normalizeReviewPayload } = require("../services/humanReviewService");
 const { appendDecisionEvent, decisionSnapshot, recordAiBaseline, verifyDecisionAudit } = require("../services/decisionAuditService");
 const { assertOperationalCityAccess, canAccessComplaint, ownsComplaint } = require("../services/operationalAccessService");
+const { issueDraftContext } = require("../services/draftContextService");
 
 const ALLOWED_STATUSES = ["Queued", "Needs Review", "In Progress", "Resolved", "Escalated"];
 const ALLOWED_VERIFICATION_VOTES = new Set(["still_there", "resolved", "got_worse"]);
@@ -159,6 +160,13 @@ async function previewComplaintImage(req, res, next) {
     }));
     const analysis = await analyzeImagePreview(req.body, { requestId: req.requestId });
     const imageAnalysis = summarizeImageAnalysis(analysis);
+    const imageAnalysisToken = ["complete", "needs_review"].includes(imageAnalysis.status)
+      ? await issueDraftContext({
+          auth: req.auth,
+          type: "image_analysis",
+          payload: analysis
+        })
+      : "";
     console.info(JSON.stringify({
       event: "complaint_analysis_completed",
       requestId: req.requestId,
@@ -170,6 +178,7 @@ async function previewComplaintImage(req, res, next) {
     }));
     res.json({
       imageAnalysis,
+      imageAnalysisToken,
       cv: analysis.cv,
       decision: analysis.decision,
       confidence: analysis.confidence,

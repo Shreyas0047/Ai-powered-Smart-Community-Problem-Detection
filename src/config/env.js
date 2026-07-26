@@ -46,7 +46,6 @@ const config = {
   zenserpBaseUrl: String(process.env.ZENSERP_BASE_URL || "https://app.zenserp.com/api/v2/search").trim(),
   zenserpEnabled: process.env.ZENSERP_ENABLED !== "false",
   zenserpMonthlyLimit: numericEnv("ZENSERP_MONTHLY_LIMIT", 48, { min: 1, max: 100000, integer: true }),
-  zenserpOfficialCacheHours: numericEnv("ZENSERP_OFFICIAL_CACHE_HOURS", 168, { min: 1, max: 720, integer: true }),
   zenserpPublicCacheHours: numericEnv("ZENSERP_PUBLIC_CACHE_HOURS", 6, { min: 1, max: 72, integer: true }),
   smtpHost: process.env.SMTP_HOST || "",
   smtpPort: numericEnv("SMTP_PORT", 587, { min: 1, max: 65535, integer: true }),

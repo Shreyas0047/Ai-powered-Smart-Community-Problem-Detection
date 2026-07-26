@@ -2,13 +2,13 @@ const Complaint = require("../models/Complaint");
 const mongoose = require("mongoose");
 const { analyzeComplaint } = require("./aiClient");
 const { createEmergencyBroadcast } = require("./broadcastService");
-const { fetchCivicEvidence } = require("./civicEvidenceService");
 const { createIncidentCommand, summarizeIncidentCommand } = require("./incidentCommandService");
 const { attachComplaintToCluster } = require("./incidentClusterService");
 const { initializeFollowUp } = require("./followUpService");
 const { canonicalPriority, routeComplaint } = require("./routingService");
-const { fetchWeatherSnapshot } = require("./weatherService");
+const { buildWeatherImpactNote, unavailableWeather } = require("./weatherService");
 const { recordAiBaseline } = require("./decisionAuditService");
+const { readDraftContext } = require("./draftContextService");
 const { extractAreaIntelligence } = require("../utils/localAlerts");
 const BENGALURU = require("../config/bengaluru");
 
@@ -402,11 +402,15 @@ async function createComplaintFromPayload(auth, payload, context = {}) {
   }, context);
   const threatAssessment = applyThreatPriority(analysis);
   analysis.threatAssessment = threatAssessment;
-  const weather = await fetchWeatherSnapshot({
-    location: locationContext,
-    mapLocation,
-    analysis
+  const checkedWeather = await readDraftContext({
+    auth,
+    token: payload.weatherContextToken,
+    type: "weather",
+    location,
+    mapLocation: suppliedMapLocation
   });
+  const weather = checkedWeather || unavailableWeather("Weather was not checked before submission.");
+  weather.note = buildWeatherImpactNote(weather, analysis);
   const rawConfidenceScore = Number(analysis.confidence || Math.max(analysis.priority.score, analysis.cv.score) || 0);
   const confidenceScore = calibrateConfidence(rawConfidenceScore, analysis, {
     textComplaint,
@@ -450,11 +454,20 @@ async function createComplaintFromPayload(auth, payload, context = {}) {
   if (weather.note) {
     analysis.alerts = [...analysis.alerts, weather.note];
   }
-  const civicEvidence = await fetchCivicEvidence({
-    analysis,
-    routing,
-    location: locationContext
-  });
+  const civicEvidence = await readDraftContext({
+    auth,
+    token: payload.civicContextToken,
+    type: "civic_evidence",
+    location,
+    mapLocation: suppliedMapLocation
+  }) || {
+    status: "unavailable",
+    provider: "zenserp",
+    reason: "Civic context was not checked before submission.",
+    officialSources: [],
+    publicContext: [],
+    quota: null
+  };
   logAiDecision({ auth, city, location, analysis, confidenceScore, reviewRequired, routing });
 
   const complaint = new Complaint({

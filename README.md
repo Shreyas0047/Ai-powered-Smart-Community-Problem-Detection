@@ -84,7 +84,7 @@ This section maps the implemented software features to their purpose and is suit
 - **Local draft recovery:** In-progress report text and location are saved in browser storage and can be restored after navigation or refresh.
 - **Map and weather preview:** **Show Map** opens an in-page location dialog without leaving the report, while **Check Weather** explicitly retrieves current condition, temperature, rainfall, humidity, and wind for a typed or live location.
 - **Weather-sensitive guidance:** Rain and wind context can add cautious guidance for drainage, flooding, sewage, electrical, fire, fallen-tree, road, vehicle, and water-leak complaints.
-- **Inline submission progress:** The form reports evidence analysis, hazard review, ward selection, department routing, official-reference lookup, public-context lookup, persistence, and completion without opening a separate result window.
+- **Inline submission progress:** The form reports evidence analysis, hazard review, ward selection, department routing, checked-context reuse, persistence, and completion without opening a separate result window.
 - **Portable complaint record:** After submission, users can generate a PDF, email the authority, and notify up to five chosen contacts.
 
 ### Civic Intelligence And Safety
@@ -112,11 +112,11 @@ This section maps the implemented software features to their purpose and is suit
 
 ### External Context And Communication
 
-- **Weatherstack context:** The report form retrieves current local conditions and stores a submission-time weather snapshot when relevant.
+- **Weatherstack context:** **Check Weather** explicitly retrieves current local conditions before submission and stores a short-lived server-owned draft snapshot.
 - **Weather cache:** Nearby coordinates and equivalent Bengaluru area names reuse MongoDB-cached observations for 45 minutes by default.
-- **Zenserp official-source finder:** After routing, the backend searches for department and authority references and marks only configured civic/government domains as verified official sources.
-- **Public incident context:** High-risk and selected weather-sensitive categories can receive recent public search context as supporting evidence.
-- **Search cache:** Department/ward references and area/category public searches are cached independently to reduce external usage.
+- **Civic context after image analysis:** **Check Civic Context** unlocks only after image analysis completes, then uses the analyzed incident and Bengaluru location to find official resources and recent area updates.
+- **Official and public result separation:** Configured civic/government domains are marked as verified official sources; other relevant results remain supporting public context and never control routing or severity.
+- **Search cache:** Equivalent area/category searches are cached to reduce external usage.
 - **Global monthly quotas:** Atomic MongoDB counters cap Weatherstack at 90 and Zenserp at 48 attempted external calls per UTC calendar month by default.
 - **Admin usage view:** Administrators can see used and remaining monthly provider calls; citizens see only useful availability states.
 - **Failure isolation:** Missing keys, quota exhaustion, malformed responses, timeouts, or empty results never block complaint creation.
@@ -184,10 +184,15 @@ sequenceDiagram
     I->>V: Compressed image
     V-->>I: Structured observations
     I-->>A: Evidence-aware decision support
+    A->>D: Store short-lived image-analysis token
+    U->>W: Check civic context
+    W->>A: Send image-analysis token and location
+    A->>D: Validate token and check search cache/quota
+    A->>C: Search only on explicit request and cache miss
+    A-->>W: Official resources and area updates
     U->>A: Submit complaint
     A->>A: Validate, assess, route, and apply safety gates
-    A->>D: Reuse weather and context caches
-    A->>C: Find official and relevant public context when allowed
+    A->>D: Validate and reuse checked draft snapshots
     A->>D: Store case, context, routing, audit, and follow-up state
     A-->>W: Trackable result with civic references
 ~~~
@@ -332,10 +337,9 @@ The EC2 container preloads Florence before Gunicorn accepts traffic. Once <code>
 | <code>WEATHER_CACHE_TTL_MINUTES=45</code> | Reuse nearby current-condition observations without another provider call |
 | <code>ZENSERP_API_KEY</code> | Official-source and public-context search |
 | <code>ZENSERP_MONTHLY_LIMIT=48</code> | Global UTC monthly Zenserp cap |
-| <code>ZENSERP_OFFICIAL_CACHE_HOURS=168</code> | Reuse department and ward reference searches |
 | <code>ZENSERP_PUBLIC_CACHE_HOURS=6</code> | Reuse recent area and category context |
 
-The report form shows current local conditions when the user explicitly presses **Check Weather** after entering or obtaining a Bengaluru location. Complaint submission reuses the server-side observation and only fetches uncached weather for weather-sensitive incidents. Civic search runs after ward and department routing: official references are checked for every routed complaint, while recent public context is limited to higher-risk or relevant categories. Cached results do not consume monthly provider allowance, and provider quota or failure never prevents complaint submission.
+The report form calls Weatherstack only when the user presses **Check Weather**. **Check Civic Context** becomes available after terminal image analysis and makes one combined Zenserp search using the server-retained analysis and Bengaluru location. Successful checks receive opaque, user-bound draft tokens that expire after two hours; complaint submission validates those tokens and stores their snapshots without calling either provider. Changing the report location invalidates checked context in the browser. Cached results do not consume monthly provider allowance, and skipping, exhausting, or failing either provider never prevents complaint submission.
 
 ### Authority Adapter
 
@@ -477,6 +481,7 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 - <code>GET /api/complaints/:id</code>
 - <code>POST /api/transcribe-audio</code>
 - <code>POST /api/context/weather-preview</code>
+- <code>POST /api/context/civic-preview</code>
 - <code>GET /api/context/usage</code> (admin only)
 - <code>GET /api/dashboard</code>
 - <code>POST /api/email-authority</code>

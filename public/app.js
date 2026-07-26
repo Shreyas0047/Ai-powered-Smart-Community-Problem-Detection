@@ -35,6 +35,12 @@ const weatherPreviewTitle = document.getElementById("weatherPreviewTitle");
 const weatherPreviewBadge = document.getElementById("weatherPreviewBadge");
 const weatherPreviewMetrics = document.getElementById("weatherPreviewMetrics");
 const weatherPreviewNote = document.getElementById("weatherPreviewNote");
+const checkCivicContextBtn = document.getElementById("checkCivicContextBtn");
+const civicContextPanel = document.getElementById("civicContextPanel");
+const civicContextTitle = document.getElementById("civicContextTitle");
+const civicContextBadge = document.getElementById("civicContextBadge");
+const civicContextNote = document.getElementById("civicContextNote");
+const civicContextResults = document.getElementById("civicContextResults");
 const resetDashboardBtn = document.getElementById("resetDashboardBtn");
 const generatePdfBtn = document.getElementById("generatePdfBtn");
 const emailBbmpBtn = document.getElementById("emailBbmpBtn");
@@ -151,6 +157,10 @@ let weatherPreviewRequestId = 0;
 let currentReportMapLocation = null;
 let lastWeatherPreviewLocation = "";
 let activeWeatherPreviewLocation = "";
+let currentImageAnalysisToken = "";
+let currentWeatherContextToken = "";
+let currentCivicContextToken = "";
+let civicContextRequestId = 0;
 const dialogReturnFocus = new WeakMap();
 
 function focusDialog(dialog) {
@@ -1462,15 +1472,14 @@ function beginSubmissionProgress(hasImage) {
         [24, "Analyzing the visible scene..."],
         [46, "Checking hazards and confidence..."],
         [66, "Selecting the ward and department..."],
-        [76, "Checking official civic references..."],
-        [86, "Checking related public reports..."],
+        [82, "Applying checked report context..."],
         [93, "Saving the complaint..."]
       ]
     : [
         [10, "Analyzing complaint details..."],
         [42, "Checking hazards and confidence..."],
         [68, "Selecting the ward and department..."],
-        [80, "Checking official civic references..."],
+        [82, "Applying checked report context..."],
         [90, "Saving the complaint..."]
       ];
   let index = 0;
@@ -1621,6 +1630,7 @@ function resetWeatherPreview(message = "Add a location, then press Check Weather
   weatherPreviewRequestId += 1;
   lastWeatherPreviewLocation = "";
   activeWeatherPreviewLocation = "";
+  currentWeatherContextToken = "";
   weatherPreviewPanel.dataset.state = "idle";
   weatherPreviewTitle.textContent = "Add a location to check current conditions";
   weatherPreviewBadge.textContent = "Not checked";
@@ -1705,6 +1715,7 @@ async function requestWeatherPreview() {
     lastWeatherPreviewLocation = locationKey;
     activeWeatherPreviewLocation = "";
     renderWeatherPreview(data.weather || {});
+    currentWeatherContextToken = String(data.contextToken || "");
   } catch (error) {
     if (requestId !== weatherPreviewRequestId) return;
     activeWeatherPreviewLocation = "";
@@ -1716,6 +1727,99 @@ async function requestWeatherPreview() {
   } finally {
     if (requestId === weatherPreviewRequestId) {
       checkWeatherBtn.disabled = false;
+    }
+  }
+}
+
+function resetCivicContext({ imageReady = false, message = "" } = {}) {
+  civicContextRequestId += 1;
+  currentCivicContextToken = "";
+  civicContextPanel.dataset.state = imageReady ? "idle" : "locked";
+  civicContextTitle.textContent = imageReady ? "Ready to check civic context" : "Complete image analysis first";
+  civicContextBadge.textContent = imageReady ? "Ready" : "Locked";
+  civicContextNote.textContent = message || (
+    imageReady
+      ? "Use the completed image analysis and location to find relevant civic information."
+      : "After image analysis, check relevant official resources and recent public updates for this location."
+  );
+  civicContextResults.hidden = true;
+  civicContextResults.innerHTML = "";
+  checkCivicContextBtn.disabled = !imageReady;
+}
+
+function renderCivicContext(evidence = {}) {
+  const officialLinks = renderPostSubmitLinks(evidence.officialSources || []);
+  const publicLinks = renderPostSubmitLinks(evidence.publicContext || []);
+  if (evidence.status !== "available") {
+    civicContextPanel.dataset.state = "unavailable";
+    civicContextTitle.textContent = "Civic context is unavailable";
+    civicContextBadge.textContent = "Unavailable";
+    civicContextNote.textContent = evidence.reason || "The complaint can still be submitted without civic context.";
+    civicContextResults.hidden = true;
+    return;
+  }
+
+  civicContextPanel.dataset.state = "available";
+  civicContextTitle.textContent = "Relevant civic information";
+  civicContextBadge.textContent = "Available";
+  civicContextNote.textContent = "Supporting information only. It does not determine complaint severity or routing.";
+  civicContextResults.hidden = false;
+  civicContextResults.innerHTML = `
+    <section>
+      <h4>Official resources</h4>
+      ${officialLinks ? `<div class="post-submit-link-list">${officialLinks}</div>` : "<p class=\"helper-text\">No verified official result was found.</p>"}
+    </section>
+    <section>
+      <h4>Area updates</h4>
+      ${publicLinks ? `<div class="post-submit-link-list">${publicLinks}</div>` : "<p class=\"helper-text\">No relevant public update was found.</p>"}
+    </section>
+  `;
+}
+
+async function requestCivicContextPreview() {
+  const location = reportLocationInput.value.trim();
+  if (!currentImageAnalysisToken) {
+    resetCivicContext({ message: "Complete image analysis before checking civic context." });
+    return;
+  }
+  if (!location && !currentReportMapLocation) {
+    resetCivicContext({ imageReady: true, message: "Add a Bengaluru location before checking civic context." });
+    return;
+  }
+  if (!authState?.token) {
+    resetCivicContext({ imageReady: true, message: "Login before checking civic context." });
+    return;
+  }
+
+  const requestId = ++civicContextRequestId;
+  checkCivicContextBtn.disabled = true;
+  civicContextPanel.dataset.state = "loading";
+  civicContextTitle.textContent = "Checking civic context";
+  civicContextBadge.textContent = "Checking";
+  civicContextNote.textContent = "Finding official resources and recent public information for the analyzed incident.";
+  civicContextResults.hidden = true;
+
+  try {
+    const data = await apiRequest("/api/context/civic-preview", {
+      method: "POST",
+      body: JSON.stringify({
+        location,
+        mapLocation: currentReportMapLocation,
+        imageAnalysisToken: currentImageAnalysisToken
+      })
+    });
+    if (requestId !== civicContextRequestId) return;
+    currentCivicContextToken = String(data.contextToken || "");
+    renderCivicContext(data.civicEvidence || {});
+  } catch (error) {
+    if (requestId !== civicContextRequestId) return;
+    civicContextPanel.dataset.state = "unavailable";
+    civicContextTitle.textContent = "Civic context is unavailable";
+    civicContextBadge.textContent = "Unavailable";
+    civicContextNote.textContent = error.message || "The complaint can still be submitted without civic context.";
+  } finally {
+    if (requestId === civicContextRequestId) {
+      checkCivicContextBtn.disabled = !currentImageAnalysisToken;
     }
   }
 }
@@ -1746,6 +1850,11 @@ function useLiveLocation() {
         lat: Number(latitude.toFixed(6)),
         lng: Number(longitude.toFixed(6))
       };
+      resetWeatherPreview("Location changed. Press Check Weather to retrieve current conditions.");
+      resetCivicContext({
+        imageReady: Boolean(currentImageAnalysisToken),
+        message: "Location changed. Check civic context again for this location."
+      });
       updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
       setDashboardMessage("Live location added to the report form.", "success");
       useLiveLocationBtn.disabled = false;
@@ -4856,8 +4965,10 @@ function resetComposer({ clearDraft = true } = {}) {
   currentImageFeatures = null;
   currentImageDataUrl = null;
   currentImageAiPayload = null;
+  currentImageAnalysisToken = "";
   currentReportMapLocation = null;
   resetWeatherPreview();
+  resetCivicContext();
   clearEmailProgressTimer();
   emailProgress.hidden = true;
   emailProgress.dataset.state = "";
@@ -5113,6 +5224,10 @@ async function analyzePreparedImage(requestId) {
       if (requestId !== imageAnalysisRequestId) return;
       const imageAnalysis = analysis.imageAnalysis || {};
       renderImageAnalysisResult(imageAnalysis);
+      currentImageAnalysisToken = String(analysis.imageAnalysisToken || "");
+      if (currentImageAnalysisToken) {
+        resetCivicContext({ imageReady: true });
+      }
       if (!imageAnalysis.retryable || imageAnalysis.status !== "processing") break;
       aiAccuracyStatus.textContent = `Visual analysis is still preparing. Retrying automatically (${attempt + 1}/20)...`;
       updateImageAnalysisProgress({
@@ -5147,6 +5262,8 @@ async function analyzePreparedImage(requestId) {
 function setupImageUpload() {
   imageFileInput.addEventListener("change", async () => {
     const requestId = ++imageAnalysisRequestId;
+    currentImageAnalysisToken = "";
+    resetCivicContext();
     const file = imageFileInput.files[0];
     if (!file) {
       uploadPreview.hidden = true;
@@ -5229,6 +5346,8 @@ retryImageAnalysisBtn.addEventListener("click", async () => {
   }
 
   const requestId = ++imageAnalysisRequestId;
+  currentImageAnalysisToken = "";
+  resetCivicContext();
   aiAccuracyStatus.textContent = "Re-submitting the image for visual analysis...";
   updateImageAnalysisProgress({
     value: 10,
@@ -5383,9 +5502,16 @@ reportLocationInput.addEventListener("input", (event) => {
   if (lastWeatherPreviewLocation && lastWeatherPreviewLocation !== currentLocationKey) {
     resetWeatherPreview("Location changed. Press Check Weather to retrieve the new conditions.");
   }
+  if (currentCivicContextToken) {
+    resetCivicContext({
+      imageReady: Boolean(currentImageAnalysisToken),
+      message: "Location changed. Check civic context again for the new location."
+    });
+  }
 });
 previewLocationBtn.addEventListener("click", showTypedLocationOnMap);
 checkWeatherBtn?.addEventListener("click", requestWeatherPreview);
+checkCivicContextBtn?.addEventListener("click", requestCivicContextPreview);
 useLiveLocationBtn?.addEventListener("click", useLiveLocation);
 closeLocationPreviewBtn?.addEventListener("click", closeLocationPreview);
 locationPreviewOverlay?.addEventListener("click", (event) => {
@@ -5512,6 +5638,8 @@ form.addEventListener("submit", async (event) => {
     payload.textComplaint = complaintPayload.complaintText;
     payload.complaintInputMode = complaintPayload.complaintInputMode;
     payload.iotTriggered = false;
+    payload.weatherContextToken = currentWeatherContextToken;
+    payload.civicContextToken = currentCivicContextToken;
     if (currentReportMapLocation) {
       payload.mapLocation = currentReportMapLocation;
     }

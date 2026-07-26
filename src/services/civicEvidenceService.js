@@ -6,7 +6,6 @@ const {
   setCachedExternalContext
 } = require("./externalContextCacheService");
 const { reserveMonthlyQuota } = require("./monthlyQuotaService");
-const { canonicalPriority } = require("./routingService");
 
 const ZENSERP_TIMEOUT_MS = 4500;
 const OFFICIAL_DOMAIN_SUFFIXES = [
@@ -20,16 +19,6 @@ const OFFICIAL_DOMAIN_SUFFIXES = [
   "bengalurutrafficpolice.gov.in",
   "nammabengaluru.org.in"
 ];
-const PUBLIC_CONTEXT_CATEGORY_IDS = new Set([
-  "water_drainage",
-  "sewage_overflow",
-  "tree_obstruction",
-  "road_damage",
-  "utility_fault",
-  "safety_fire",
-  "security",
-  "vehicle_obstruction"
-]);
 
 function unavailableEvidence(status, reason, quota = null) {
   return {
@@ -46,18 +35,16 @@ function normalizeSearchValue(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function buildOfficialQuery({ analysis, routing, location }) {
-  const issueType = normalizeSearchValue(analysis?.nlp?.issueType || analysis?.cv?.detected || "civic complaint");
-  const department = normalizeSearchValue(routing?.department || routing?.unit || analysis?.nlp?.team || "");
-  const authority = normalizeSearchValue(routing?.authority || analysis?.assignedAuthority || "");
-  const area = normalizeSearchValue(location || "India");
-  return [issueType, department, authority, area, "official complaint portal contact"].filter(Boolean).join(" ");
-}
-
-function buildPublicContextQuery({ analysis, location }) {
+function buildPreviewQuery({ analysis, location }) {
   const issueType = normalizeSearchValue(analysis?.nlp?.issueType || analysis?.cv?.detected || "civic issue");
-  const area = normalizeSearchValue(location || "India");
-  return [area, issueType, "today public report municipal update"].filter(Boolean).join(" ");
+  const department = normalizeSearchValue(analysis?.nlp?.team || "");
+  const area = normalizeSearchValue(location || "Bengaluru");
+  return [
+    area,
+    issueType,
+    department,
+    "BBMP BESCOM BWSSB official civic update public report"
+  ].filter(Boolean).join(" ");
 }
 
 function extractHost(url) {
@@ -108,18 +95,6 @@ function extractOrganicResults(data) {
     data?.web_results
   ];
   return candidates.find(Array.isArray) || [];
-}
-
-function summarizeQuota(currentQuota, nextQuota) {
-  if (!nextQuota) return currentQuota || null;
-  if (!currentQuota) return nextQuota;
-  return {
-    provider: nextQuota.provider,
-    month: nextQuota.month,
-    limit: nextQuota.limit,
-    used: Math.max(Number(currentQuota.used || 0), Number(nextQuota.used || 0)),
-    remaining: Math.min(Number(currentQuota.remaining || 0), Number(nextQuota.remaining || 0))
-  };
 }
 
 async function callZenserp(query, sourceType, cacheOptions = {}) {
@@ -216,91 +191,48 @@ async function callZenserp(query, sourceType, cacheOptions = {}) {
   }
 }
 
-function shouldFetchPublicContext(analysis) {
-  const priority = canonicalPriority(analysis?.priority?.level);
-  const categoryId = analysis?.aiMeta?.categoryId || "general";
-  return priority === "Critical" || priority === "High" || PUBLIC_CONTEXT_CATEGORY_IDS.has(categoryId);
-}
-
-async function fetchCivicEvidence({ analysis, routing, location }) {
+async function fetchCivicEvidencePreview({ analysis, location }) {
   if (!env.zenserpEnabled) {
-    return unavailableEvidence("unavailable", "Zenserp civic search is disabled.");
+    return unavailableEvidence("unavailable", "Civic context is disabled.");
   }
-
   if (!env.zenserpApiKey) {
-    return unavailableEvidence("unavailable", "Zenserp API key is not configured.");
+    return unavailableEvidence("unavailable", "Civic context is not configured.");
   }
 
-  const officialQuery = buildOfficialQuery({ analysis, routing, location });
-  const officialCacheKey = buildExternalCacheKey([
+  const query = buildPreviewQuery({ analysis, location });
+  const cacheKey = buildExternalCacheKey([
     "zenserp",
-    "official",
-    routing?.department,
-    routing?.authority,
-    routing?.ward || "bengaluru"
+    "civic_preview",
+    analysis?.aiMeta?.categoryId || analysis?.nlp?.issueType || analysis?.cv?.detected,
+    normalizeCachePart(location),
+    new Date().toISOString().slice(0, 10)
   ]);
-  const officialResult = await callZenserp(officialQuery, "official", {
-    cacheKey: officialCacheKey,
-    ttlMs: env.zenserpOfficialCacheHours * 60 * 60 * 1000
+  const result = await callZenserp(query, "civic_context", {
+    cacheKey,
+    ttlMs: env.zenserpPublicCacheHours * 60 * 60 * 1000
   });
-  let quota = summarizeQuota(null, officialResult.quota);
-  const officialSources = officialResult.results
-    .map((result) => ({ ...result, official: isOfficialLooking(result) }))
-    .sort((left, right) => Number(right.official) - Number(left.official))
+  const normalized = result.results.slice(0, 5);
+  const officialSources = normalized
+    .filter(isOfficialLooking)
+    .map((item) => ({ ...item, sourceType: "official", official: true }))
+    .slice(0, 3);
+  const publicContext = normalized
+    .filter((item) => !isOfficialLooking(item))
+    .map((item) => ({ ...item, sourceType: "public_context", official: undefined }))
     .slice(0, 3);
 
-  let publicResult = {
-    status: "unavailable",
-    reason: "Public context search was not required for this complaint.",
-    results: [],
-    quota: null
-  };
-  if (shouldFetchPublicContext(analysis)) {
-    const publicQuery = buildPublicContextQuery({ analysis, location });
-    const publicCacheKey = buildExternalCacheKey([
-      "zenserp",
-      "public",
-      analysis?.aiMeta?.categoryId || analysis?.nlp?.issueType,
-      normalizeCachePart(location),
-      new Date().toISOString().slice(0, 10)
-    ]);
-    publicResult = await callZenserp(publicQuery, "public_context", {
-      cacheKey: publicCacheKey,
-      ttlMs: env.zenserpPublicCacheHours * 60 * 60 * 1000
-    });
-    quota = summarizeQuota(quota, publicResult.quota);
-  }
-
-  const publicContext = publicResult.results.slice(0, 3);
-  const statuses = [officialResult.status, publicResult.status];
-  const status =
-    statuses.every((item) => item === "quota_exceeded")
-      ? "quota_exceeded"
-      : officialSources.length || publicContext.length
-        ? "available"
-        : statuses.includes("quota_exceeded")
-          ? "quota_exceeded"
-          : "unavailable";
-  const reason =
-    status === "available"
-      ? ""
-      : statuses.includes("quota_exceeded")
-        ? "Monthly Zenserp quota reached."
-        : officialResult.reason || publicResult.reason || "No civic evidence found.";
-
   return {
-    status,
+    status: officialSources.length || publicContext.length ? "available" : result.status,
     provider: "zenserp",
-    reason,
+    reason: officialSources.length || publicContext.length ? "" : result.reason,
     officialSources,
     publicContext,
-    quota
+    quota: result.quota
   };
 }
 
 module.exports = {
-  buildOfficialQuery,
-  buildPublicContextQuery,
-  isOfficialLooking,
-  fetchCivicEvidence
+  buildPreviewQuery,
+  fetchCivicEvidencePreview,
+  isOfficialLooking
 };

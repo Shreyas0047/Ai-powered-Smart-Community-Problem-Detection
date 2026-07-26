@@ -1738,6 +1738,10 @@ textarea {
   border-color: rgba(255, 184, 77, 0.2);
 }
 
+.weather-preview-panel[data-state="locked"] {
+  opacity: 0.72;
+}
+
 .weather-preview-head {
   display: flex;
   align-items: start;
@@ -1803,6 +1807,35 @@ textarea {
 
 .weather-preview-panel > .helper-text {
   margin: 12px 0 0;
+}
+
+.civic-context-panel > button {
+  margin-top: 16px;
+}
+
+.civic-context-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.civic-context-results > section {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(205, 218, 245, 0.09);
+  border-radius: 12px;
+  background: rgba(8, 13, 21, 0.72);
+}
+
+.civic-context-results h4 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.civic-context-results .post-submit-link-list {
+  margin-top: 0;
 }
 
 .post-submit-context {
@@ -1896,6 +1929,10 @@ textarea {
   .weather-preview-metrics,
   .external-context-usage {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .civic-context-results {
+    grid-template-columns: 1fr;
   }
 }
 
