@@ -234,7 +234,7 @@
     <div id="mainDashboard" class="app-shell">
       <div class="main-frame">
         <header class="topbar" data-react-liquid-glass="navigation">
-          <a href="#heroStage" class="brand-lockup">
+          <a href="#aboutView" class="brand-lockup">
             <span class="project-logo project-logo-nav">
               <img src="/urban-pulse-logo-transparent.png" alt="Urban Pulse" />
             </span>
@@ -247,13 +247,12 @@
           </button>
 
           <nav id="siteNav" class="site-nav">
-            <a href="#heroStage" class="nav-link is-active">Home</a>
+            <a href="#aboutView" class="nav-link is-active">Home</a>
             <a href="#adminWorkspace" class="nav-link">Dashboard</a>
             <a href="#reportFormWorkspace" class="nav-link">Report</a>
             <a href="#complaintsWorkspace" class="nav-link">Complaints</a>
             <a href="#alertsWorkspace" class="nav-link">Alerts</a>
             <a href="#mapWorkspace" class="nav-link">Map</a>
-            <a href="#aboutView" class="nav-link">About</a>
             <span id="navTubelight" class="nav-tubelight" aria-hidden="true"></span>
             <div class="nav-actions">
               <button type="button" id="issueTokenBtn" class="light-beam-button">Login</button>
@@ -263,91 +262,19 @@
         </header>
 
         <main id="mainContent" class="content-shell" tabindex="-1">
-          <section id="heroStage" class="hero-stage app-view-section" data-view-section="home" data-reveal>
-            <div class="hero-sticky-shell">
-              <div class="hero-grid hero-story-grid">
-                <div class="hero-copy hero-story-copy">
-                  <h1>Report civic issues. Track response. Understand city health.</h1>
-                  <p class="hero-text">
-                    Urban Pulse AI helps citizens submit complaints and helps admins route, monitor, and respond to incidents faster.
-                  </p>
-                  <div class="hero-actions">
-                    <a href="#reportFormWorkspace" class="light-beam-button gradient-button hero-button">Report an issue</a>
-                    <a href="#adminWorkspace" class="ghost-link hero-button">View dashboard</a>
-                  </div>
-
-                  <div class="feature-list" aria-label="Urban Pulse AI features">
-                    <article class="feature-card">
-                      <span class="feature-index">01</span>
-                      <div>
-                        <strong>Report issues</strong>
-                        <p>Add text, voice, location, and an image in one form.</p>
-                      </div>
-                    </article>
-                    <article class="feature-card">
-                      <span class="feature-index">02</span>
-                      <div>
-                        <strong>AI assisted review</strong>
-                        <p>The app can describe the image and help classify the issue.</p>
-                      </div>
-                    </article>
-                    <article class="feature-card">
-                      <span class="feature-index">03</span>
-                      <div>
-                        <strong>Track response</strong>
-                        <p>See complaint history, admin actions, alerts, and the map together.</p>
-                      </div>
-                    </article>
-                    <article class="feature-card">
-                      <span class="feature-index">04</span>
-                      <div>
-                        <strong>Close the loop</strong>
-                        <p>Generate a PDF, send email, and close the workflow from the same page.</p>
-                      </div>
-                    </article>
-                  </div>
-                </div>
-
-              </div>
-
-              <div class="hero-liquid-dock" aria-label="Urban Pulse AI workspace shortcuts">
-                <a href="#complaintsWorkspace" class="liquid-dock-card">
-                  <span>Recent</span>
-                  <strong>Complaints</strong>
-                </a>
-                <a href="#reportFormWorkspace" class="liquid-dock-card">
-                  <span>AI</span>
-                  <strong>Analysis</strong>
-                </a>
-                <a href="#mapWorkspace" class="liquid-dock-card">
-                  <span>Live</span>
-                  <strong>Map</strong>
-                </a>
-                <a href="#adminWorkspace" class="liquid-dock-card">
-                  <span>Admin</span>
-                  <strong>Dashboard</strong>
-                </a>
-                <a href="#alertsWorkspace" class="liquid-dock-card liquid-dock-card-alert">
-                  <span>Emergency</span>
-                  <strong>Alerts</strong>
-                </a>
-                <a href="#adminWorkspace" class="liquid-dock-card">
-                  <span>Official</span>
-                  <strong>Sources</strong>
-                </a>
-                <a href="#adminWorkspace" class="liquid-dock-card">
-                  <span>72h</span>
-                  <strong>Forecast</strong>
-                </a>
-              </div>
-            </div>
-          </section>
-
-          <section id="aboutView" class="section-shell about-shell app-view-section" data-view-section="about" data-reveal hidden>
-            <div class="section-head">
+          <section id="aboutView" class="section-shell about-shell app-view-section" data-view-section="home" data-reveal>
+            <div class="section-head about-home-head">
               <div>
-                <p class="eyebrow">About</p>
-                <h2>What Urban Pulse does and how the app is organised.</h2>
+                <p class="eyebrow">Urban Pulse AI</p>
+                <h1>Report civic issues. Follow what happens next.</h1>
+                <p class="about-home-summary">
+                  A Bengaluru-focused platform for reporting local problems, understanding evidence, finding the
+                  responsible ward and department, and tracking action in one place.
+                </p>
+                <div class="hero-actions about-home-actions">
+                  <a href="#reportFormWorkspace" class="light-beam-button gradient-button hero-button">Report an issue</a>
+                  <a href="#complaintsWorkspace" class="ghost-link hero-button">Track complaints</a>
+                </div>
               </div>
             </div>
 
@@ -386,51 +313,125 @@
               </div>
             </div>
 
-            <div class="about-grid">
+            <div class="about-grid about-overview-grid">
               <article class="section-subpanel section-subpanel-main about-intro">
+                <p class="eyebrow subtle">One connected workflow</p>
                 <p class="about-lead">
-                  Urban Pulse is a complaint reporting and management app. Citizens can submit issues with text, voice,
-                  location, and images. Admins can review complaints, update status, manage alerts, and handle users.
+                  Urban Pulse connects a citizen's report to the people responsible for reviewing it. Evidence,
+                  location, community updates, routing, authority communication, and resolution history stay attached
+                  to the same complaint.
                 </p>
                 <div class="about-points">
                   <div class="about-point">
-                    <strong>Report issues</strong>
-                    <p>Submit complaints with location, image evidence, text, and voice input.</p>
+                    <strong>Evidence first</strong>
+                    <p>Add a photo, location, written description, or voice note. Image analysis records visible conditions and uncertainty without blocking submission.</p>
                   </div>
                   <div class="about-point">
-                    <strong>Use AI support</strong>
-                    <p>Generate image descriptions and issue summaries to speed up reporting.</p>
+                    <strong>Bengaluru routing</strong>
+                    <p>Location, ward, issue type, severity, and department rules help identify where the complaint should go.</p>
                   </div>
                   <div class="about-point">
-                    <strong>Take action</strong>
-                    <p>Generate PDFs, send email, track alerts, and update complaint status.</p>
+                    <strong>Public follow-through</strong>
+                    <p>Citizens can follow status changes while administrators manage delivery, escalation, evidence, and closure.</p>
                   </div>
                 </div>
               </article>
 
               <article class="section-subpanel about-stack">
                 <div class="about-block">
-                  <p class="eyebrow subtle">Main sections</p>
+                  <p class="eyebrow subtle">For citizens</p>
                   <ul class="about-list">
-                    <li><strong>Home:</strong> overview of the product and main flows.</li>
-                    <li><strong>Report:</strong> upload evidence, fill the form, and submit a complaint.</li>
-                    <li><strong>Complaints:</strong> review submitted complaints and their updates.</li>
-                    <li><strong>Dashboard:</strong> admin metrics, complaint management, and actions.</li>
-                    <li><strong>Alerts:</strong> items that need attention.</li>
-                    <li><strong>Map:</strong> location preview and user management access.</li>
+                    <li>Report sanitation, road, drainage, electrical, safety, animal, water, and other civic issues.</li>
+                    <li>See visual findings before submitting and retry analysis when evidence cannot be read.</li>
+                    <li>Verify whether a nearby issue is still present, worsening, resolved, or duplicated.</li>
+                    <li>Receive relevant area alerts without exposing another reporter's private information.</li>
                   </ul>
                 </div>
 
                 <div class="about-block">
-                  <p class="eyebrow subtle">Built for</p>
+                  <p class="eyebrow subtle">For administrators</p>
                   <ul class="about-list">
-                    <li>Citizens who want a simple reporting flow.</li>
-                    <li>Admins who need a single place to review and act.</li>
-                    <li>Teams who want reporting, tracking, and escalation in one app.</li>
+                    <li>Review severity, threat indicators, visual evidence, duplicate signals, and community verification.</li>
+                    <li>See ward, department, routing reason, authority delivery status, and escalation history.</li>
+                    <li>Use the dashboard, alert queue, map, audit trail, reports, and resolution evidence together.</li>
                   </ul>
                 </div>
               </article>
             </div>
+
+            <section class="about-process" aria-labelledby="aboutProcessTitle">
+              <div class="about-section-heading">
+                <p class="eyebrow subtle">How a report moves</p>
+                <h2 id="aboutProcessTitle">From evidence to resolution.</h2>
+              </div>
+              <div class="about-process-track">
+                <article class="about-process-step">
+                  <span>01</span>
+                  <strong>Capture</strong>
+                  <p>The citizen adds the issue, location, and available evidence.</p>
+                </article>
+                <article class="about-process-step">
+                  <span>02</span>
+                  <strong>Understand</strong>
+                  <p>The system examines the report for visible conditions, risk, and missing information.</p>
+                </article>
+                <article class="about-process-step">
+                  <span>03</span>
+                  <strong>Route</strong>
+                  <p>Ward and department rules select the responsible Bengaluru civic team.</p>
+                </article>
+                <article class="about-process-step">
+                  <span>04</span>
+                  <strong>Verify</strong>
+                  <p>Nearby community updates and admin review establish the current condition.</p>
+                </article>
+                <article class="about-process-step">
+                  <span>05</span>
+                  <strong>Resolve</strong>
+                  <p>Status, authority communication, escalation, and closure evidence complete the record.</p>
+                </article>
+              </div>
+            </section>
+
+            <div class="about-capability-grid">
+              <article class="about-capability about-capability-wide">
+                <p class="eyebrow subtle">Civic intelligence</p>
+                <h3>Support for difficult reports, not automatic decisions.</h3>
+                <p>
+                  Visual observations, complaint text, weather context, repeat incidents, location, and community
+                  evidence help reviewers understand a case. Final priority, safety, routing, escalation, and
+                  resolution decisions remain part of the Urban Pulse workflow and can be reviewed by people.
+                </p>
+                <div class="about-chip-row" aria-label="Civic intelligence capabilities">
+                  <span>Multiple visible issues</span>
+                  <span>Threat assessment</span>
+                  <span>Duplicate detection</span>
+                  <span>Human review</span>
+                  <span>Decision audit</span>
+                </div>
+              </article>
+
+              <article class="about-capability">
+                <p class="eyebrow subtle">Accountability</p>
+                <h3>A complaint remains traceable.</h3>
+                <p>Delivery attempts, status changes, verification activity, escalation, and resolution evidence are recorded instead of disappearing after submission.</p>
+              </article>
+
+              <article class="about-capability">
+                <p class="eyebrow subtle">Privacy</p>
+                <h3>Community visibility without reporter exposure.</h3>
+                <p>Nearby users can contribute current-condition updates while personal reporter details remain protected from the community view.</p>
+              </article>
+            </div>
+
+            <section class="about-final-cta" aria-label="Start using Urban Pulse">
+              <div>
+                <p class="eyebrow subtle">Start here</p>
+                <h2>See an issue in Bengaluru?</h2>
+                <p>Submit the evidence you have. Missing or uncertain analysis will not prevent the report from continuing.</p>
+              </div>
+              <a href="#reportFormWorkspace" class="light-beam-button gradient-button">Create a report</a>
+            </section>
           </section>
 
           <section id="reportView" class="reporting-command section-shell app-view-section" data-view-section="report-group" data-reveal hidden>

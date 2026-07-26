@@ -726,8 +726,7 @@ function showInlineReportResult(report) {
 }
 
 const viewTargets = {
-  home: { hash: "heroStage", section: () => document.getElementById("heroStage") },
-  about: { hash: "aboutView", section: () => aboutView },
+  home: { hash: "aboutView", section: () => aboutView },
   report: { hash: "reportFormWorkspace", section: () => reportView },
   complaints: { hash: "complaintsWorkspace", section: () => reportView },
   admin: { hash: "adminWorkspace", section: () => adminView },
@@ -770,6 +769,9 @@ function getViewNameFromElement(element) {
 
 function getViewNameFromHash(hashValue) {
   const normalizedHash = String(hashValue || "").replace(/^#/, "");
+  if (normalizedHash === "heroStage") {
+    return "home";
+  }
   const matched = Object.entries(viewTargets).find(([, config]) => config.hash === normalizedHash);
   return matched ? matched[0] : "home";
 }
@@ -803,17 +805,12 @@ function updateTubelightNav() {
 function activateAppView(viewName = "home", options = {}) {
   const { updateHash = true, message = "", scroll = true } = options;
   const nextView = viewTargets[viewName] ? viewName : "home";
-  const aboutVisible = nextView === "about";
+  const aboutVisible = nextView === "home";
   const reportGroupVisible = nextView === "report" || nextView === "complaints";
   const adminGroupVisible = nextView === "admin" || nextView === "alerts";
   const mapGroupVisible = nextView === "map" || nextView === "users";
 
   document.body.dataset.appView = nextView;
-
-  const heroStage = viewTargets.home.section();
-  if (heroStage) {
-    heroStage.hidden = nextView !== "home";
-  }
 
   if (aboutView) {
     aboutView.hidden = !aboutVisible;
@@ -832,7 +829,7 @@ function activateAppView(viewName = "home", options = {}) {
   }
 
   if (pageFooter) {
-    pageFooter.hidden = nextView !== "home" && nextView !== "about";
+    pageFooter.hidden = nextView !== "home";
   }
 
   document.querySelectorAll(".nav-link").forEach((link) => {
