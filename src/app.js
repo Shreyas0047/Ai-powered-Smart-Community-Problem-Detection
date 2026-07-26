@@ -36,6 +36,7 @@ app.use("/api/auth/register/request-otp", createRateLimiter({ windowMs: 10 * 60 
 app.use("/api/auth/password-reset/request-otp", createRateLimiter({ windowMs: 10 * 60 * 1000, max: 6, keyPrefix: "password-reset-otp", message: "Too many password reset OTP requests. Please wait before requesting another code." }));
 app.use("/api/transcribe-audio", createRateLimiter({ windowMs: 10 * 60 * 1000, max: 25, keyPrefix: "stt", message: "Too many transcription requests. Please wait and try again." }));
 app.use("/api/chatbot", createRateLimiter({ windowMs: 10 * 60 * 1000, max: 40, keyPrefix: "chatbot", message: "Too many chatbot requests. Please wait and try again." }));
+app.use("/api/context/weather-preview", createRateLimiter({ windowMs: 10 * 60 * 1000, max: 15, keyPrefix: "weather-preview", message: "Too many local condition checks. Please wait before trying again." }));
 app.use("/api/complaints", createRateLimiter({ windowMs: 10 * 60 * 1000, max: 45, keyPrefix: "complaint-actions", message: "Too many complaint actions. Please wait and try again." }));
 
 app.use("/api", apiRoutes);

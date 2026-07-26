@@ -1,21 +1,24 @@
 const env = require("../config/env");
+const {
+  buildExternalCacheKey,
+  getCachedExternalContext,
+  normalizeCachePart,
+  setCachedExternalContext
+} = require("./externalContextCacheService");
 const { reserveMonthlyQuota } = require("./monthlyQuotaService");
 const { canonicalPriority } = require("./routingService");
 
 const ZENSERP_TIMEOUT_MS = 4500;
-const OFFICIAL_DOMAIN_HINTS = [
-  "bbmp.gov",
-  "bbmp",
-  "bwssb",
-  "bescom",
-  "btp.gov",
-  "karnataka.gov",
-  "karnataka",
-  "bengaluru",
-  "bangalore",
-  "nammabengaluru",
-  ".gov.in",
-  ".nic.in"
+const OFFICIAL_DOMAIN_SUFFIXES = [
+  "bbmp.gov.in",
+  "site.bbmp.gov.in",
+  "karnataka.gov.in",
+  "karunadu.karnataka.gov.in",
+  "bescom.karnataka.gov.in",
+  "bwssb.karnataka.gov.in",
+  "bengaluruurban.nic.in",
+  "bengalurutrafficpolice.gov.in",
+  "nammabengaluru.org.in"
 ];
 const PUBLIC_CONTEXT_CATEGORY_IDS = new Set([
   "water_drainage",
@@ -66,8 +69,8 @@ function extractHost(url) {
 }
 
 function isOfficialLooking(result) {
-  const haystack = [result.url, result.title, result.snippet, extractHost(result.url)].join(" ").toLowerCase();
-  return OFFICIAL_DOMAIN_HINTS.some((hint) => haystack.includes(hint));
+  const host = extractHost(result.url);
+  return Boolean(host) && OFFICIAL_DOMAIN_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 
 function normalizeResult(item, query, sourceType) {
@@ -75,7 +78,14 @@ function normalizeResult(item, query, sourceType) {
   const url = normalizeSearchValue(item.url || item.link || item.href || "");
   const snippet = normalizeSearchValue(item.description || item.snippet || item.content || "");
 
-  if (!title || !url) {
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(url);
+  } catch (_error) {
+    return null;
+  }
+
+  if (!title || !["http:", "https:"].includes(parsedUrl.protocol)) {
     return null;
   }
 
@@ -112,7 +122,19 @@ function summarizeQuota(currentQuota, nextQuota) {
   };
 }
 
-async function callZenserp(query, sourceType) {
+async function callZenserp(query, sourceType, cacheOptions = {}) {
+  const cacheKey = cacheOptions.cacheKey || buildExternalCacheKey(["zenserp", sourceType, query]);
+  const cached = await getCachedExternalContext({ provider: "zenserp", cacheKey });
+  if (cached?.payload?.results) {
+    return {
+      status: "available",
+      reason: "",
+      results: cached.payload.results,
+      quota: null,
+      cached: true
+    };
+  }
+
   const quotaReservation = await reserveMonthlyQuota({
     provider: "zenserp",
     limit: env.zenserpMonthlyLimit
@@ -160,11 +182,20 @@ async function callZenserp(query, sourceType) {
       .filter(Boolean);
 
     console.info(JSON.stringify({ event: "zenserp_search_success", sourceType, resultCount: results.length }));
+    if (results.length) {
+      await setCachedExternalContext({
+        provider: "zenserp",
+        cacheKey,
+        payload: { results },
+        ttlMs: Number(cacheOptions.ttlMs || env.zenserpPublicCacheHours * 60 * 60 * 1000)
+      });
+    }
     return {
       status: "available",
       reason: "",
       results,
-      quota: quotaReservation.quota
+      quota: quotaReservation.quota,
+      cached: false
     };
   } catch (error) {
     console.warn(
@@ -201,7 +232,17 @@ async function fetchCivicEvidence({ analysis, routing, location }) {
   }
 
   const officialQuery = buildOfficialQuery({ analysis, routing, location });
-  const officialResult = await callZenserp(officialQuery, "official");
+  const officialCacheKey = buildExternalCacheKey([
+    "zenserp",
+    "official",
+    routing?.department,
+    routing?.authority,
+    routing?.ward || "bengaluru"
+  ]);
+  const officialResult = await callZenserp(officialQuery, "official", {
+    cacheKey: officialCacheKey,
+    ttlMs: env.zenserpOfficialCacheHours * 60 * 60 * 1000
+  });
   let quota = summarizeQuota(null, officialResult.quota);
   const officialSources = officialResult.results
     .map((result) => ({ ...result, official: isOfficialLooking(result) }))
@@ -215,7 +256,18 @@ async function fetchCivicEvidence({ analysis, routing, location }) {
     quota: null
   };
   if (shouldFetchPublicContext(analysis)) {
-    publicResult = await callZenserp(buildPublicContextQuery({ analysis, location }), "public_context");
+    const publicQuery = buildPublicContextQuery({ analysis, location });
+    const publicCacheKey = buildExternalCacheKey([
+      "zenserp",
+      "public",
+      analysis?.aiMeta?.categoryId || analysis?.nlp?.issueType,
+      normalizeCachePart(location),
+      new Date().toISOString().slice(0, 10)
+    ]);
+    publicResult = await callZenserp(publicQuery, "public_context", {
+      cacheKey: publicCacheKey,
+      ttlMs: env.zenserpPublicCacheHours * 60 * 60 * 1000
+    });
     quota = summarizeQuota(quota, publicResult.quota);
   }
 

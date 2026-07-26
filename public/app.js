@@ -29,6 +29,11 @@ const imageAnalysisProgressFill = document.getElementById("imageAnalysisProgress
 const imageAnalysisProgressDetail = document.getElementById("imageAnalysisProgressDetail");
 const previewLocationBtn = document.getElementById("previewLocationBtn");
 const useLiveLocationBtn = document.getElementById("useLiveLocationBtn");
+const weatherPreviewPanel = document.getElementById("weatherPreviewPanel");
+const weatherPreviewTitle = document.getElementById("weatherPreviewTitle");
+const weatherPreviewBadge = document.getElementById("weatherPreviewBadge");
+const weatherPreviewMetrics = document.getElementById("weatherPreviewMetrics");
+const weatherPreviewNote = document.getElementById("weatherPreviewNote");
 const resetDashboardBtn = document.getElementById("resetDashboardBtn");
 const generatePdfBtn = document.getElementById("generatePdfBtn");
 const emailBbmpBtn = document.getElementById("emailBbmpBtn");
@@ -79,6 +84,7 @@ const adminView = document.getElementById("adminView");
 const adminWorkspace = document.getElementById("adminWorkspace");
 const adminActionCenter = document.getElementById("adminActionCenter");
 const authorityGovernancePanel = document.getElementById("authorityGovernancePanel");
+const externalContextUsagePanel = document.getElementById("externalContextUsagePanel");
 const alertsWorkspace = document.getElementById("alertsWorkspace");
 const alertsList = document.getElementById("alertsList");
 const alertSearchInput = document.getElementById("alertSearchInput");
@@ -115,6 +121,7 @@ const locationMapFrame = document.getElementById("locationMapFrame");
 const liveLocationStatus = document.getElementById("liveLocationStatus");
 const pageFooter = document.querySelector(".page-footer");
 const postSubmitSummary = document.getElementById("postSubmitSummary");
+const postSubmitContext = document.getElementById("postSubmitContext");
 const reportResultPanel = document.getElementById("reportResultPanel");
 const informClosedOnesBtn = document.getElementById("informClosedOnesBtn");
 const closeContactsForm = document.getElementById("closeContactsForm");
@@ -134,6 +141,10 @@ let currentImageFeatures = null;
 let currentImageDataUrl = null;
 let currentImageAiPayload = null;
 let imageAnalysisRequestId = 0;
+let weatherPreviewRequestId = 0;
+let currentReportMapLocation = null;
+let lastWeatherPreviewLocation = "";
+let activeWeatherPreviewLocation = "";
 const dialogReturnFocus = new WeakMap();
 
 function focusDialog(dialog) {
@@ -707,7 +718,10 @@ function renderPostSubmitSummary(report) {
     ["Severity", report.priority || "Low"],
     ["Issue", report.issueType || "Complaint"],
     ...(report.aiDescription && report.aiDescription !== report.issueType ? [["Visual finding", report.aiDescription]] : []),
-    ["Location", report.location || "Unknown"]
+    ["Location", report.location || "Unknown"],
+    ...(report.weather?.status === "available"
+      ? [["Local conditions", `${report.weather.condition || "Observed"} · ${formatWeatherValue(report.weather.temperatureC, "°C")}`]]
+      : [])
   ]
     .map(
       ([label, value]) => `
@@ -720,8 +734,55 @@ function renderPostSubmitSummary(report) {
     .join("");
 }
 
+function renderPostSubmitLinks(items = []) {
+  return items
+    .slice(0, 3)
+    .map((item) => {
+      const href = safeExternalHref(item.url);
+      if (!href) return "";
+      const sourceLabel = item.official ? "Verified official source" : item.domain || "Search result";
+      return `
+        <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
+          <strong>${escapeHtml(item.title || "Reference")}</strong>
+          <span>${escapeHtml(sourceLabel)}</span>
+        </a>
+      `;
+    })
+    .filter(Boolean)
+    .join("");
+}
+
+function renderPostSubmitContext(report) {
+  if (!postSubmitContext) return;
+  const evidence = report?.civicEvidence || {};
+  const officialLinks = renderPostSubmitLinks(evidence.officialSources || []);
+  const publicLinks = renderPostSubmitLinks(evidence.publicContext || []);
+  const weatherNote = report?.weather?.note || "";
+
+  postSubmitContext.innerHTML = `
+    ${weatherNote ? `
+      <section class="post-submit-context-section">
+        <h4>Conditions at submission</h4>
+        <p>${escapeHtml(weatherNote)}</p>
+      </section>
+    ` : ""}
+    <section class="post-submit-context-section">
+      <h4>Official and civic references</h4>
+      ${officialLinks ? `<div class="post-submit-link-list">${officialLinks}</div>` : `<p>${escapeHtml(evidence.reason || "No relevant official references were available.")}</p>`}
+    </section>
+    ${publicLinks ? `
+      <section class="post-submit-context-section">
+        <h4>Related public context</h4>
+        <p>Supporting context only. These results do not determine severity or routing.</p>
+        <div class="post-submit-link-list">${publicLinks}</div>
+      </section>
+    ` : ""}
+  `;
+}
+
 function showInlineReportResult(report) {
   renderPostSubmitSummary(report);
+  renderPostSubmitContext(report);
   if (reportResultPanel) reportResultPanel.hidden = false;
 }
 
@@ -1394,14 +1455,16 @@ function beginSubmissionProgress(hasImage) {
         [24, "Analyzing the visible scene..."],
         [46, "Checking hazards and confidence..."],
         [66, "Selecting the ward and department..."],
-        [82, "Saving the complaint..."],
-        [90, "Preparing report actions..."]
+        [76, "Checking official civic references..."],
+        [86, "Checking related public reports..."],
+        [93, "Saving the complaint..."]
       ]
     : [
         [10, "Analyzing complaint details..."],
         [42, "Checking hazards and confidence..."],
         [68, "Selecting the ward and department..."],
-        [86, "Saving the complaint..."]
+        [80, "Checking official civic references..."],
+        [90, "Saving the complaint..."]
       ];
   let index = 0;
   setEmailProgress(stages[0][0], stages[0][1]);
@@ -1526,7 +1589,106 @@ function showTypedLocationOnMap() {
     return;
   }
 
+  requestWeatherPreview();
   activateAppView("map");
+}
+
+function resetWeatherPreview(message = "Conditions are checked when you finish entering a location, show it on the map, or use live location.") {
+  weatherPreviewRequestId += 1;
+  lastWeatherPreviewLocation = "";
+  activeWeatherPreviewLocation = "";
+  weatherPreviewPanel.dataset.state = "idle";
+  weatherPreviewTitle.textContent = "Add a location to check current conditions";
+  weatherPreviewBadge.textContent = "Not checked";
+  weatherPreviewMetrics.hidden = true;
+  weatherPreviewMetrics.innerHTML = "";
+  weatherPreviewNote.textContent = message;
+}
+
+function renderWeatherPreview(weather = {}) {
+  if (weather.status !== "available") {
+    weatherPreviewPanel.dataset.state = "unavailable";
+    weatherPreviewTitle.textContent = "Local conditions are unavailable";
+    weatherPreviewBadge.textContent = "Unavailable";
+    weatherPreviewMetrics.hidden = true;
+    weatherPreviewMetrics.innerHTML = "";
+    weatherPreviewNote.textContent = weather.reason || "The complaint can still be submitted without current conditions.";
+    return;
+  }
+
+  weatherPreviewPanel.dataset.state = "available";
+  weatherPreviewTitle.textContent = weather.locationName || reportLocationInput.value.trim() || "Bengaluru";
+  weatherPreviewBadge.textContent = weather.cached ? "Recently checked" : "Updated";
+  weatherPreviewMetrics.hidden = false;
+  weatherPreviewMetrics.innerHTML = [
+    ["Condition", weather.condition || "Not recorded"],
+    ["Temperature", formatWeatherValue(weather.temperatureC, "°C")],
+    ["Rain", formatWeatherValue(weather.precipitationMm, " mm")],
+    ["Wind", formatWeatherValue(weather.windKph, " km/h")]
+  ]
+    .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
+    .join("");
+  const humidity = formatWeatherValue(weather.humidity, "%");
+  const observation = weather.observedAt ? ` Observed ${weather.observedAt}.` : "";
+  weatherPreviewNote.textContent = weather.note || `Humidity ${humidity}.${observation}`;
+}
+
+function getWeatherIssueContext() {
+  return [
+    typedComplaintInput?.value,
+    voiceTranscriptInput?.value,
+    aiImageDescription?.value
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+async function requestWeatherPreview() {
+  const location = reportLocationInput.value.trim();
+  if (!location && !currentReportMapLocation) {
+    resetWeatherPreview("Add a Bengaluru location before checking current conditions.");
+    return;
+  }
+  if (!authState?.token) {
+    resetWeatherPreview("Login before checking current conditions.");
+    return;
+  }
+
+  const locationKey = `${location}|${currentReportMapLocation?.lat || ""}|${currentReportMapLocation?.lng || ""}`;
+  if (weatherPreviewPanel.dataset.state === "loading" && activeWeatherPreviewLocation === locationKey) {
+    return;
+  }
+  const requestId = ++weatherPreviewRequestId;
+  activeWeatherPreviewLocation = locationKey;
+  weatherPreviewPanel.dataset.state = "loading";
+  weatherPreviewTitle.textContent = "Checking current conditions";
+  weatherPreviewBadge.textContent = "Checking";
+  weatherPreviewMetrics.hidden = true;
+  weatherPreviewNote.textContent = "Using the report location to retrieve a recent observation.";
+
+  try {
+    const data = await apiRequest("/api/context/weather-preview", {
+      method: "POST",
+      body: JSON.stringify({
+        location,
+        mapLocation: currentReportMapLocation,
+        issueContext: getWeatherIssueContext()
+      })
+    });
+    if (requestId !== weatherPreviewRequestId) return;
+    lastWeatherPreviewLocation = locationKey;
+    activeWeatherPreviewLocation = "";
+    renderWeatherPreview(data.weather || {});
+  } catch (error) {
+    if (requestId !== weatherPreviewRequestId) return;
+    activeWeatherPreviewLocation = "";
+    weatherPreviewPanel.dataset.state = "unavailable";
+    weatherPreviewTitle.textContent = "Local conditions are unavailable";
+    weatherPreviewBadge.textContent = "Unavailable";
+    weatherPreviewMetrics.hidden = true;
+    weatherPreviewNote.textContent = error.message || "The complaint can still be submitted without current conditions.";
+  }
 }
 
 function useLiveLocation() {
@@ -1551,9 +1713,14 @@ function useLiveLocation() {
       }
 
       reportLocationInput.value = readableLocation;
+      currentReportMapLocation = {
+        lat: Number(latitude.toFixed(6)),
+        lng: Number(longitude.toFixed(6))
+      };
       updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
       setDashboardMessage("Live location added to the report form.", "success");
       useLiveLocationBtn.disabled = false;
+      requestWeatherPreview();
     },
     (error) => {
       const message =
@@ -2465,7 +2632,9 @@ function formatWeatherValue(value, suffix = "") {
 function renderWeatherSummary(complaint) {
   const weather = complaint.weather || {};
   if (weather.status !== "available") {
-    return weather.reason || "Weather context was not available for this complaint.";
+    return /weatherstack|api key/i.test(String(weather.reason || ""))
+      ? "Local conditions were not available for this complaint."
+      : weather.reason || "Local conditions were not available for this complaint.";
   }
 
   return [
@@ -2485,23 +2654,28 @@ function renderEvidenceLinks(items = [], emptyMessage = "No references found.") 
   }
 
   return items
-    .map(
-      (item) => `
-        <a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer noopener">${escapeHtml(item.title || item.domain || "Reference")}</a>
-        <span>${escapeHtml(item.domain || "")}${item.official ? " · official-looking" : ""}</span>
-      `
-    )
+    .map((item) => {
+      const href = safeExternalHref(item.url);
+      if (!href) return "";
+      return `
+        <a href="${escapeHtml(href)}" target="_blank" rel="noreferrer noopener">${escapeHtml(item.title || item.domain || "Reference")}</a>
+        <span>${escapeHtml(item.domain || "")}${item.official ? " · verified official source" : ""}</span>
+      `;
+    })
+    .filter(Boolean)
     .join("<br>");
 }
 
 function renderCivicEvidenceReason(complaint) {
   const evidence = complaint.civicEvidence || {};
   if (evidence.status === "available") {
-    const remaining = Number(evidence.quota?.remaining);
-    return Number.isFinite(remaining) ? `Zenserp quota remaining this month: ${remaining}.` : "Search context is available.";
+    return "Civic reference context is available.";
   }
 
-  return evidence.reason || "Civic search context was not available for this complaint.";
+  if (/zenserp|api key/i.test(String(evidence.reason || ""))) {
+    return "Civic reference context was not available for this complaint.";
+  }
+  return evidence.reason || "Civic reference context was not available for this complaint.";
 }
 
 function getThreatAssessment(complaint) {
@@ -2918,7 +3092,7 @@ function renderComplaintDetail(complaint, intelligence = {}, reviewOptions = nul
           <p>${renderWeatherSummary(complaint)}</p>
         </section>
         <section class="detail-support-card">
-          <p class="detail-section-label">Official sources</p>
+          <p class="detail-section-label">Official and civic references</p>
           <strong>${complaint.civicEvidence?.officialSources?.length ? pluralize(complaint.civicEvidence.officialSources.length, "reference") : "No references"}</strong>
           <p>${renderEvidenceLinks(complaint.civicEvidence?.officialSources || [], renderCivicEvidenceReason(complaint))}</p>
         </section>
@@ -3884,6 +4058,54 @@ async function loadAuthorityGovernance() {
   }
 }
 
+function renderExternalContextUsage(integrations = null) {
+  if (!externalContextUsagePanel) return;
+  if (!integrations) {
+    externalContextUsagePanel.innerHTML = "";
+    externalContextUsagePanel.hidden = true;
+    return;
+  }
+
+  const rows = [
+    ["Weather context", integrations.weather],
+    ["Civic search", integrations.civicSearch]
+  ];
+  externalContextUsagePanel.hidden = false;
+  externalContextUsagePanel.innerHTML = rows
+    .map(([label, usage]) => {
+      const used = Number(usage?.used || 0);
+      const limit = Math.max(1, Number(usage?.limit || 0));
+      const percentage = Math.min(100, Math.round((used / limit) * 100));
+      return `
+        <article class="external-context-meter">
+          <span>${escapeHtml(label)}</span>
+          <strong>${used} / ${limit}</strong>
+          <div class="external-context-meter-track" aria-label="${escapeHtml(label)} monthly usage">
+            <i style="--usage:${percentage}%"></i>
+          </div>
+          <p>${usage?.enabled ? `${Math.max(0, limit - used)} external calls remain for ${escapeHtml(usage.month || "this month")}. Cached results do not use this allowance.` : "Integration is not configured."}</p>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function loadExternalContextUsage() {
+  if (!authState?.permissions?.includes("view_dashboard")) {
+    renderExternalContextUsage(null);
+    return;
+  }
+
+  externalContextUsagePanel.hidden = false;
+  externalContextUsagePanel.innerHTML = '<p class="helper-text">Loading external context usage...</p>';
+  try {
+    const data = await apiRequest("/api/context/usage", { method: "GET" });
+    renderExternalContextUsage(data.integrations || null);
+  } catch (error) {
+    externalContextUsagePanel.innerHTML = `<p class="helper-text">${escapeHtml(error.message)}</p>`;
+  }
+}
+
 function parseLocalAlertAreasInput() {
   return localAlertAreasInput.value
     .split(",")
@@ -4583,7 +4805,8 @@ async function loadDashboard() {
     applyPermissionState();
   }
   await Promise.all([
-    loadAuthorityGovernance()
+    loadAuthorityGovernance(),
+    loadExternalContextUsage()
   ]);
 }
 
@@ -4605,6 +4828,8 @@ function resetComposer({ clearDraft = true } = {}) {
   currentImageFeatures = null;
   currentImageDataUrl = null;
   currentImageAiPayload = null;
+  currentReportMapLocation = null;
+  resetWeatherPreview();
   clearEmailProgressTimer();
   emailProgress.hidden = true;
   emailProgress.dataset.state = "";
@@ -4612,6 +4837,7 @@ function resetComposer({ clearDraft = true } = {}) {
   emailProgressValue.textContent = "0%";
   emailProgressLabel.textContent = "Preparing report...";
   if (reportResultPanel) reportResultPanel.hidden = true;
+  if (postSubmitContext) postSubmitContext.innerHTML = "";
   if (closeContactsForm) {
     closeContactsForm.hidden = true;
     closeContactsForm.reset();
@@ -5123,7 +5349,16 @@ emailBbmpBtn.addEventListener("click", async () => {
   }
 });
 reportLocationInput.addEventListener("input", (event) => {
+  currentReportMapLocation = null;
   updateLiveLocationMap(event.target.value);
+  const currentLocationKey = `${event.target.value.trim()}||`;
+  if (lastWeatherPreviewLocation && lastWeatherPreviewLocation !== currentLocationKey) {
+    resetWeatherPreview("Location changed. Finish entering it to check the new conditions.");
+  }
+});
+reportLocationInput.addEventListener("blur", (event) => {
+  if (event.relatedTarget === previewLocationBtn || event.relatedTarget === useLiveLocationBtn) return;
+  if (reportLocationInput.value.trim()) requestWeatherPreview();
 });
 previewLocationBtn.addEventListener("click", showTypedLocationOnMap);
 useLiveLocationBtn?.addEventListener("click", useLiveLocation);
@@ -5248,6 +5483,9 @@ form.addEventListener("submit", async (event) => {
     payload.textComplaint = complaintPayload.complaintText;
     payload.complaintInputMode = complaintPayload.complaintInputMode;
     payload.iotTriggered = false;
+    if (currentReportMapLocation) {
+      payload.mapLocation = currentReportMapLocation;
+    }
     payload.imageFeatures = currentImageFeatures || (await extractImageFeatures(imageFile));
     const imageAiPayload = currentImageAiPayload || (imageFile ? await prepareImageForAi(imageFile) : null);
     if (imageAiPayload) {

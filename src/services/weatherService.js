@@ -1,4 +1,9 @@
 const env = require("../config/env");
+const {
+  buildExternalCacheKey,
+  getCachedExternalContext,
+  setCachedExternalContext
+} = require("./externalContextCacheService");
 const { reserveMonthlyQuota } = require("./monthlyQuotaService");
 
 const WEATHER_TIMEOUT_MS = 3500;
@@ -26,8 +31,14 @@ function unavailableWeather(reason) {
     humidity: null,
     windKph: null,
     note: "",
+    cached: false,
     quota: null
   };
+}
+
+function isWeatherRelevant(analysis) {
+  const categoryId = analysis?.aiMeta?.categoryId || "general";
+  return WEATHER_RELEVANT_CATEGORY_IDS.has(categoryId);
 }
 
 function buildWeatherQuery({ location, mapLocation }) {
@@ -38,6 +49,19 @@ function buildWeatherQuery({ location, mapLocation }) {
   }
 
   return String(location || "").trim();
+}
+
+function buildWeatherCacheKey({ location, mapLocation }) {
+  const lat = Number(mapLocation?.lat);
+  const lng = Number(mapLocation?.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return buildExternalCacheKey(["weather", lat.toFixed(3), lng.toFixed(3), "metric"]);
+  }
+  const area = String(location || "")
+    .replace(/\b(bengaluru|bangalore|karnataka|india)\b/gi, " ")
+    .replace(/[,\s]+/g, " ")
+    .trim();
+  return buildExternalCacheKey(["weather", area, "bengaluru", "metric"]);
 }
 
 function normalizeWeatherResponse(data) {
@@ -102,7 +126,7 @@ function buildWeatherImpactNote(weather, analysis) {
   return "";
 }
 
-async function fetchWeatherSnapshot({ location, mapLocation, analysis }) {
+async function fetchWeatherSnapshot({ location, mapLocation, analysis, force = false }) {
   if (!env.weatherstackEnabled) {
     return unavailableWeather("Weather context is disabled.");
   }
@@ -114,6 +138,22 @@ async function fetchWeatherSnapshot({ location, mapLocation, analysis }) {
   const query = buildWeatherQuery({ location, mapLocation });
   if (!query) {
     return unavailableWeather("Location is missing.");
+  }
+
+  const cacheKey = buildWeatherCacheKey({ location, mapLocation });
+  const cached = await getCachedExternalContext({ provider: "weatherstack", cacheKey });
+  if (cached?.payload?.status === "available") {
+    const weather = {
+      ...cached.payload,
+      cached: true,
+      quota: null
+    };
+    weather.note = buildWeatherImpactNote(weather, analysis);
+    return weather;
+  }
+
+  if (!force && !isWeatherRelevant(analysis)) {
+    return unavailableWeather("Current weather was not required for this complaint type.");
   }
 
   const quotaReservation = await reserveMonthlyQuota({
@@ -154,7 +194,17 @@ async function fetchWeatherSnapshot({ location, mapLocation, analysis }) {
 
     const weather = normalizeWeatherResponse(data);
     weather.note = buildWeatherImpactNote(weather, analysis);
+    weather.cached = false;
     weather.quota = quotaReservation.quota;
+    await setCachedExternalContext({
+      provider: "weatherstack",
+      cacheKey,
+      payload: {
+        ...weather,
+        quota: null
+      },
+      ttlMs: env.weatherCacheTtlMinutes * 60 * 1000
+    });
     return weather;
   } catch (error) {
     console.warn(
@@ -173,7 +223,9 @@ async function fetchWeatherSnapshot({ location, mapLocation, analysis }) {
 }
 
 module.exports = {
+  buildWeatherCacheKey,
   buildWeatherImpactNote,
   fetchWeatherSnapshot,
+  isWeatherRelevant,
   unavailableWeather
 };

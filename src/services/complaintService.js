@@ -324,7 +324,19 @@ async function createComplaintFromPayload(auth, payload, context = {}) {
   }
 
   const locationContext = `${location}, ${city.name}, ${city.state}, India`;
-  const geocoded = await geocodeLocation(locationContext, city.center);
+  const suppliedLat = Number(payload.mapLocation?.lat);
+  const suppliedLng = Number(payload.mapLocation?.lng);
+  const suppliedMapLocation = Number.isFinite(suppliedLat) && Number.isFinite(suppliedLng)
+    ? { lat: suppliedLat, lng: suppliedLng }
+    : null;
+  if (suppliedMapLocation && !isWithinCityEnvelope(city, suppliedMapLocation, 0.02)) {
+    const error = createHttpError(`The supplied coordinates appear to be outside ${city.name}.`, 400);
+    error.code = "LOCATION_CITY_MISMATCH";
+    throw error;
+  }
+  const geocoded = suppliedMapLocation
+    ? { ...suppliedMapLocation, source: "browser_geolocation" }
+    : await geocodeLocation(locationContext, city.center);
   const mapLocation = { lat: geocoded.lat, lng: geocoded.lng };
   if (geocoded.source === "nominatim" && !isWithinCityEnvelope(city, mapLocation)) {
     const error = createHttpError(`The location appears to be outside ${city.name}. Make the Bengaluru location more specific.`, 400);
@@ -756,5 +768,6 @@ module.exports = {
   summarizeImageAnalysis,
   createComplaintFromPayload,
   createHttpError,
+  geocodeLocation,
   isWithinCityEnvelope
 };

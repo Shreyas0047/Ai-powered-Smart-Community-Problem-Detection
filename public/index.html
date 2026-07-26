@@ -513,6 +513,18 @@
                     </div>
                   </label>
 
+                  <section id="weatherPreviewPanel" class="weather-preview-panel" data-state="idle" aria-live="polite">
+                    <div class="weather-preview-head">
+                      <div>
+                        <span class="field-label">Local conditions</span>
+                        <strong id="weatherPreviewTitle">Add a location to check current conditions</strong>
+                      </div>
+                      <span id="weatherPreviewBadge" class="weather-preview-badge">Not checked</span>
+                    </div>
+                    <div id="weatherPreviewMetrics" class="weather-preview-metrics" hidden></div>
+                    <p id="weatherPreviewNote" class="helper-text">Conditions are checked when you finish entering a location, show it on the map, or use live location.</p>
+                  </section>
+
                   <label>
                     <span class="field-label">Complaint input type</span>
                     <select id="complaintInputMode" name="complaintInputMode">
@@ -608,6 +620,7 @@
                       <span class="report-result-check" aria-hidden="true">✓</span>
                     </div>
                     <div id="postSubmitSummary" class="post-submit-summary report-result-summary"></div>
+                    <div id="postSubmitContext" class="post-submit-context"></div>
                   </section>
                 </form>
 
@@ -674,6 +687,7 @@
               </div>
               <div id="adminActionCenter" class="admin-action-center"></div>
               <section id="authorityGovernancePanel" class="authority-governance-panel" aria-live="polite"></section>
+              <section id="externalContextUsagePanel" class="external-context-usage" aria-live="polite"></section>
               <div id="adminInsights" class="insight-grid"></div>
               <div class="section-head compact ops-subhead">
                 <div>

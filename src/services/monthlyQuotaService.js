@@ -104,7 +104,37 @@ async function reserveMonthlyQuota({ provider, limit }) {
   }
 }
 
+async function getMonthlyQuotaUsage({ provider, limit, date = new Date() }) {
+  const safeProvider = String(provider || "").trim().toLowerCase();
+  const safeLimit = Math.max(0, Number(limit || 0));
+  const month = getUtcMonthKey(date);
+
+  if (!safeProvider || safeLimit <= 0 || mongoose.connection.readyState !== 1) {
+    return buildQuotaSnapshot({ provider: safeProvider, month, limit: safeLimit, count: 0 });
+  }
+
+  try {
+    const usage = await ExternalApiUsage.findOne({ provider: safeProvider, month }).lean();
+    return buildQuotaSnapshot({
+      provider: safeProvider,
+      month,
+      limit: safeLimit,
+      count: usage?.count || 0
+    });
+  } catch (error) {
+    console.warn(JSON.stringify({
+      event: "external_api_quota_read_failed",
+      provider: safeProvider,
+      month,
+      reason: error.message || "unknown quota error"
+    }));
+    return buildQuotaSnapshot({ provider: safeProvider, month, limit: safeLimit, count: 0 });
+  }
+}
+
 module.exports = {
+  buildQuotaSnapshot,
+  getMonthlyQuotaUsage,
   getUtcMonthKey,
   reserveMonthlyQuota
 };

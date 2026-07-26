@@ -9,6 +9,7 @@ const { deleteUser, updateUser } = require("../controllers/userController");
 const { exportComplaintDecisionAudit, getCorrectionFeedback } = require("../controllers/decisionAuditController");
 const { confirmManualSubmission, reconcileTicket, retryAuthorityTicket, submitAuthorityTicket } = require("../controllers/authorityTicketController");
 const { evaluateAuthorityGovernance, getAuthorityGovernance } = require("../controllers/authorityGovernanceController");
+const { getExternalContextUsage, previewWeather } = require("../controllers/contextController");
 const { authenticate, requirePermission } = require("../middleware/auth");
 
 const router = express.Router();
@@ -24,6 +25,8 @@ router.post("/auth/login", login);
 router.use(authenticate);
 
 router.get("/dashboard", requirePermission("submit_complaint"), getDashboard);
+router.post("/context/weather-preview", requirePermission("submit_complaint"), previewWeather);
+router.get("/context/usage", requirePermission("view_dashboard"), getExternalContextUsage);
 router.post("/analyze-complaint", requirePermission("submit_complaint"), analyzeAndCreateComplaint);
 router.post("/analyze-image", requirePermission("submit_complaint"), previewComplaintImage);
 router.post("/transcribe-audio", requirePermission("submit_complaint"), transcribeComplaintAudio);

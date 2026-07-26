@@ -24,6 +24,7 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 ## Contents
 
 - [What It Does](#what-it-does)
+- [Feature Catalogue](#feature-catalogue)
 - [Reporting UI](#reporting-ui)
 - [Architecture](#architecture)
 - [Decision Boundaries](#decision-boundaries)
@@ -46,7 +47,9 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 | Authority workflow | Supports tracked manual-portal, email, or webhook handoff with retries, references, reconciliation, and SLA monitoring |
 | Incident intelligence | Detects duplicate clusters, emergency broadcasts, incident commands, follow-ups, and ward-level risk pressure |
 | Accountability | Stores human corrections, append-only decision audits, confidence signals, and provider observability |
-| External context | Adds quota-controlled weather and civic references without overriding civic decisions |
+| External context | Shows location weather, weather-sensitive guidance, official civic references, and relevant public context using quota-controlled, cached providers |
+| Citizen communication | Provides local-area email alerts, emergency broadcasts, authority email, contact notifications, PDF reports, and complaint timelines |
+| Administrative operations | Provides city-health metrics, complaint queues, maps, risk forecasts, incident rooms, SLA governance, user management, and provider-usage visibility |
 | Resilience | Falls back safely when optional providers fail and always preserves complaint submission |
 
 ### Supported Bengaluru Departments
@@ -61,6 +64,64 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 - Water-related Civic Services
 - General Ward Administration
 
+## Feature Catalogue
+
+This section maps the implemented software features to their purpose and is suitable as a functional summary for project documentation.
+
+### Identity And Access
+
+- **Email-based registration:** Citizen accounts are created only after an OTP sent to the entered email address is verified.
+- **Login and role permissions:** JWT sessions distinguish Citizen and Admin capabilities, while disabled accounts and stale token versions are rejected.
+- **Forgot password:** Registered users can request an email OTP and set a new password after verification.
+- **Administrative account management:** Authorized admins can inspect accounts, change supported account settings, disable access, and remove users.
+- **Abuse controls:** Authentication, OTP, transcription, chatbot, weather preview, complaint actions, and general APIs use bounded rate limits.
+
+### Citizen Reporting
+
+- **Text, voice, image, and location input:** A complaint can combine typed text, an editable Deepgram transcript, JPEG/PNG/WebP evidence, a typed Bengaluru location, or browser geolocation.
+- **Image preview analysis:** Citizens see the visible incident, scene description, hazards, evidence confidence, image quality, text-image consistency, and review recommendation before submission.
+- **Retry without re-uploading:** If visual analysis is delayed or unavailable, **Re-submit Image** retries the retained prepared image.
+- **Local draft recovery:** In-progress report text and location are saved in browser storage and can be restored after navigation or refresh.
+- **Map and weather preview:** A typed or live location can be opened on the map and checked for current condition, temperature, rainfall, humidity, and wind.
+- **Weather-sensitive guidance:** Rain and wind context can add cautious guidance for drainage, flooding, sewage, electrical, fire, fallen-tree, road, vehicle, and water-leak complaints.
+- **Inline submission progress:** The form reports evidence analysis, hazard review, ward selection, department routing, official-reference lookup, public-context lookup, persistence, and completion without opening a separate result window.
+- **Portable complaint record:** After submission, users can generate a PDF, email the authority, and notify up to five chosen contacts.
+
+### Civic Intelligence And Safety
+
+- **Structured scene understanding:** Visual providers return observations rather than final civic decisions, including multiple simultaneous issues, affected infrastructure, hazards, environmental conditions, uncertainty, and evidence limitations.
+- **Multimodal reasoning:** Urban Pulse combines visual observations with complaint text, voice, location, previous reports, and area context.
+- **Threat assessment:** The internal decision layer calculates threat level, risk evidence, integrity signals, duplicate correlation, and a safety-gate action.
+- **Review-safe uncertainty:** Blurry, unrelated, contradictory, malformed, unavailable, or low-confidence evidence is marked for more evidence or human review instead of being forced into a confident category.
+- **Duplicate and cluster intelligence:** Related reports can be grouped into an incident cluster while preserving each original complaint record.
+- **Human correction:** Authorized reviewers can confirm or correct category, priority, and department decisions using controlled options.
+- **Decision audit:** Corrections and important case decisions are written to an append-only, hash-chained audit history.
+- **AI observability and benchmarking:** Provider outcomes, fallback use, latency, disagreement, category behavior, benchmark manifests, and model-comparison policy support controlled evaluation.
+
+### Bengaluru Operations
+
+- **Ward and department routing:** The routing layer uses Bengaluru location evidence, ward matching, category, severity, workload, and a versioned routing registry instead of hardcoded controller logic.
+- **Configurable authority handoff:** Complaints support manual official-portal submission, email delivery, or webhook adapters with delivery attempts and external references.
+- **Authority SLA governance:** Handoff, acknowledgement, and resolution deadlines can be evaluated, escalated, retried, and reconciled.
+- **Emergency broadcasts:** High-risk incidents can notify eligible nearby users while recording channels, recipients, delivery status, and send time.
+- **Area-based citizen alerts:** Registered users can save Bengaluru areas and receive email alerts when matching complaints reach their selected severity threshold.
+- **Community verification:** Eligible nearby users can report that an issue is still present, worsening, resolved, or duplicated without seeing reporter details.
+- **Resolution loop:** Authority resolution updates can request citizen follow-up evidence; unresolved or worsening conditions return to review and escalation.
+- **Incident command:** Qualifying cases can open operational response rooms with severity, assigned unit, SLA, checklist, risk score, and status.
+- **Operational dashboards:** Admin views include complaint metrics, alert queues, mapped incidents, clusters, command rooms, city-health indicators, risk forecasts, community cases, and AI observability.
+
+### External Context And Communication
+
+- **Weatherstack context:** The report form retrieves current local conditions and stores a submission-time weather snapshot when relevant.
+- **Weather cache:** Nearby coordinates and equivalent Bengaluru area names reuse MongoDB-cached observations for 45 minutes by default.
+- **Zenserp official-source finder:** After routing, the backend searches for department and authority references and marks only configured civic/government domains as verified official sources.
+- **Public incident context:** High-risk and selected weather-sensitive categories can receive recent public search context as supporting evidence.
+- **Search cache:** Department/ward references and area/category public searches are cached independently to reduce external usage.
+- **Global monthly quotas:** Atomic MongoDB counters cap Weatherstack at 90 and Zenserp at 48 attempted external calls per UTC calendar month by default.
+- **Admin usage view:** Administrators can see used and remaining monthly provider calls; citizens see only useful availability states.
+- **Failure isolation:** Missing keys, quota exhaustion, malformed responses, timeouts, or empty results never block complaint creation.
+- **Chatbot assistance:** The authenticated assistant supports navigation, complaint questions, status guidance, and project FAQs with stored chat history and a clear-history action.
+
 ## Reporting UI
 
 <p align="center">
@@ -69,7 +130,7 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 
 <p align="center"><sub>Screenshot placeholder: add the final reporting screen at <code>report.png</code> in the repository root.</sub></p>
 
-The report workspace provides immediate image-analysis states, a failure-only **Re-submit Image** action, inline submission progress, location preview, and a unified result panel. Complaint details use a responsive modal workspace for routing, evidence, verification, authority status, timelines, and human review.
+The report workspace provides immediate image-analysis states, a failure-only **Re-submit Image** action, browser-geolocation support, map preview, local weather conditions, draft recovery, voice transcription, inline submission progress, and a unified result panel. The result includes the selected ward and authority, conditions at submission, verified civic references, public context, and report actions. Complaint details use a responsive modal workspace for routing, evidence, verification, authority status, timelines, public context, weather, threat assessment, resolution, and human review.
 
 ## Architecture
 
@@ -86,6 +147,8 @@ flowchart LR
     API --> Route[Bengaluru Routing]
     API --> Authority[Authority Adapter]
     API --> Context[Weather + Civic Search]
+    Context --> Quota[Monthly Quota Guard]
+    Context --> Cache[(Mongo Context Cache)]
     API --> Mail[SMTP / Alerts]
 ~~~
 
@@ -97,7 +160,7 @@ flowchart LR
 | Express API | Authentication, validation, persistence, quotas, routing, authority workflow, email, reports, and permissions |
 | Flask AI service | Provider orchestration, multimodal fusion, confidence calibration, threat reasoning, and human-review gates |
 | Florence on AWS EC2 | Sanitized image perception only; it cannot route, prioritize, accept, or close complaints |
-| MongoDB Atlas | Users, OTP state, complaints, audits, clusters, commands, tickets, quotas, and operational history |
+| MongoDB Atlas | Users, OTP state, complaints, audits, clusters, commands, tickets, provider quotas, external-context cache, and operational history |
 
 ### Complaint Lifecycle
 
@@ -108,9 +171,14 @@ sequenceDiagram
     participant A as Express API
     participant I as AI Service
     participant V as Visual provider
+    participant C as Context providers
     participant D as MongoDB
 
     U->>W: Add evidence and Bengaluru location
+    W->>A: Request local conditions
+    A->>D: Check weather cache and quota
+    A->>C: Fetch only on cache miss
+    A-->>W: Current conditions and cautious guidance
     W->>A: Preview image analysis
     A->>I: Sanitized analysis request
     I->>V: Compressed image
@@ -118,8 +186,10 @@ sequenceDiagram
     I-->>A: Evidence-aware decision support
     U->>A: Submit complaint
     A->>A: Validate, assess, route, and apply safety gates
-    A->>D: Store case, routing, audit, and follow-up state
-    A-->>W: Trackable complaint result
+    A->>D: Reuse weather and context caches
+    A->>C: Find official and relevant public context when allowed
+    A->>D: Store case, context, routing, audit, and follow-up state
+    A-->>W: Trackable result with civic references
 ~~~
 
 ## Decision Boundaries
@@ -259,10 +329,13 @@ The EC2 container preloads Florence before Gunicorn accepts traffic. Once <code>
 | <code>DEEPGRAM_API_KEY</code> | Voice transcription |
 | <code>WEATHERSTACK_API_KEY</code> | Weather-sensitive incident context |
 | <code>WEATHERSTACK_MONTHLY_LIMIT=90</code> | Global UTC monthly Weatherstack cap |
+| <code>WEATHER_CACHE_TTL_MINUTES=45</code> | Reuse nearby current-condition observations without another provider call |
 | <code>ZENSERP_API_KEY</code> | Official-source and public-context search |
 | <code>ZENSERP_MONTHLY_LIMIT=48</code> | Global UTC monthly Zenserp cap |
+| <code>ZENSERP_OFFICIAL_CACHE_HOURS=168</code> | Reuse department and ward reference searches |
+| <code>ZENSERP_PUBLIC_CACHE_HOURS=6</code> | Reuse recent area and category context |
 
-Provider quota or failure never prevents complaint submission.
+The report form shows current local conditions after a Bengaluru location is completed, mapped, or obtained through browser geolocation. Complaint submission reuses the server-side observation and only fetches uncached weather for weather-sensitive incidents. Civic search runs after ward and department routing: official references are checked for every routed complaint, while recent public context is limited to higher-risk or relevant categories. Cached results do not consume monthly provider allowance, and provider quota or failure never prevents complaint submission.
 
 ### Authority Adapter
 
@@ -286,6 +359,8 @@ Set <code>AUTHORITY_ADAPTER</code> to <code>disabled</code>, <code>email</code>,
 - Expose only the port required by the selected transport.
 - Restrict <code>CORS_ORIGIN</code> to the deployed frontend.
 - Use a Gmail app password or a transactional SMTP provider.
+- Configure Weatherstack and Zenserp limits conservatively; cached responses do not increment monthly usage.
+- Verify that admins can load external-context usage while citizens cannot access the admin-only endpoint.
 - Verify <code>/health</code> and <code>/ready</code> for all deployed services.
 - Run <code>npm run verify:release</code> before promotion.
 
@@ -312,6 +387,7 @@ npm run verify:release
 | <code>npm run verify:bengaluru-routing</code> | Ward and department routing |
 | <code>npm run verify:community-verification</code> | Privacy-safe nearby verification |
 | <code>npm run verify:authority-tickets</code> | Authority adapters and ticket state |
+| <code>npm run verify:external-context</code> | Bengaluru weather preview, cache reuse, official-domain validation, route permissions, and admin-only quota visibility |
 | <code>npm run verify:decision-audit</code> | Hash-chained correction history |
 | <code>npm run verify:resilience</code> | Failure-safe behavior |
 | <code>npm run verify:smtp</code> | SMTP connectivity and sender configuration |
@@ -383,6 +459,8 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 <details>
 <summary><strong>Authentication</strong></summary>
 
+- <code>GET /api/roles</code>
+- <code>POST /api/auth/token</code> (development only; disabled in production)
 - <code>POST /api/auth/register/request-otp</code>
 - <code>POST /api/auth/register</code>
 - <code>POST /api/auth/login</code>
@@ -398,8 +476,17 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 - <code>POST /api/analyze-complaint</code>
 - <code>GET /api/complaints/:id</code>
 - <code>POST /api/transcribe-audio</code>
+- <code>POST /api/context/weather-preview</code>
+- <code>GET /api/context/usage</code> (admin only)
 - <code>GET /api/dashboard</code>
 - <code>POST /api/email-authority</code>
+- <code>POST /api/email-bbmp</code> (compatibility alias)
+- <code>POST /api/inform-close-contacts</code>
+- <code>GET /api/chatbot/history</code>
+- <code>POST /api/chatbot/message</code>
+- <code>DELETE /api/chatbot/history</code>
+- <code>GET /api/local-alert-preferences</code>
+- <code>PATCH /api/local-alert-preferences</code>
 
 </details>
 
@@ -407,12 +494,32 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 <summary><strong>Verification, review, and authority workflow</strong></summary>
 
 - <code>POST /api/complaints/:id/community-verification</code>
+- <code>POST /api/complaints/:id/community-proof</code> (compatibility alias)
+- <code>POST /api/complaints/:id/verification</code>
 - <code>POST /api/complaints/:id/resolution-evidence</code>
 - <code>POST /api/complaints/:id/human-review</code>
 - <code>GET /api/complaints/:id/decision-audit</code>
+- <code>GET /api/decision-audit/feedback</code>
 - <code>POST /api/complaints/:id/authority-ticket</code>
 - <code>POST /api/complaints/:id/authority-ticket/retry</code>
+- <code>POST /api/authority-tickets/:ticketId/manual-confirmation</code>
 - <code>PATCH /api/authority-tickets/:ticketId/reconcile</code>
+- <code>PATCH /api/complaints/:id/status</code>
+- <code>POST /api/complaints/:id/alerts/acknowledge</code>
+- <code>GET /api/authority-governance</code>
+- <code>POST /api/authority-governance/evaluate</code>
+
+</details>
+
+<details>
+<summary><strong>Administration and health</strong></summary>
+
+- <code>PATCH /api/users/:id</code>
+- <code>DELETE /api/users/:id</code>
+- <code>POST /api/reset-dashboard</code>
+- <code>GET /health</code>
+- <code>GET /health/live</code>
+- <code>GET /health/ready</code>
 
 </details>
 
@@ -420,7 +527,9 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 
 - **OTP not received:** verify SMTP credentials, Gmail app password, sender identity, and <code>SMTP_FAMILY=4</code>; failed delivery never reports success.
 - **Image analysis unavailable:** check the Flask service, AWS EC2 <code>/ready</code>, security-group port, container logs, and shared token equality. Re-submit Image retries the retained photo.
-- **Provider quota reached:** weather and civic-search providers return unavailable snapshots while complaint creation continues.
+- **Weather unavailable:** confirm the location resolves inside Bengaluru, inspect the admin usage panel, and verify Weatherstack configuration. Cached observations and complaint submission remain available independently.
+- **Civic references unavailable:** inspect the admin usage panel and Zenserp configuration. Routing and complaint creation continue without search context.
+- **Provider quota reached:** the backend skips new provider calls, serves valid cached snapshots where possible, and continues complaint creation.
 - **Authority delivery failed:** inspect the authority ticket attempt history and retry only when its retry window opens.
 - **Unclear image:** request better evidence or use human review; never reinterpret low-confidence observations as confirmed facts.
 

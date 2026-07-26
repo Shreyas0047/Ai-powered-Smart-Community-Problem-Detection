@@ -117,6 +117,7 @@ const complaintSchema = new mongoose.Schema(
       humidity: { type: Number, default: null },
       windKph: { type: Number, default: null },
       note: { type: String, default: "" },
+      cached: { type: Boolean, default: false },
       quota: mongoose.Schema.Types.Mixed
     },
     civicEvidence: {

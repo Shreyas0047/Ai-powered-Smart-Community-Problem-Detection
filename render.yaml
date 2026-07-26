@@ -124,6 +124,8 @@ services:
         value: "true"
       - key: WEATHERSTACK_MONTHLY_LIMIT
         value: "90"
+      - key: WEATHER_CACHE_TTL_MINUTES
+        value: "45"
       - key: ZENSERP_API_KEY
         sync: false
       - key: ZENSERP_BASE_URL
@@ -132,6 +134,10 @@ services:
         value: "true"
       - key: ZENSERP_MONTHLY_LIMIT
         value: "48"
+      - key: ZENSERP_OFFICIAL_CACHE_HOURS
+        value: "168"
+      - key: ZENSERP_PUBLIC_CACHE_HOURS
+        value: "6"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
