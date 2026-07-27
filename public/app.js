@@ -1760,9 +1760,11 @@ function renderCivicContext(evidence = {}) {
   }
 
   civicContextPanel.dataset.state = "available";
-  civicContextTitle.textContent = "Relevant civic information";
+  const incident = String(evidence.incidentSummary || "the detected civic issue").trim();
+  const area = String(evidence.searchArea || reportLocationInput.value.trim() || "this area").trim();
+  civicContextTitle.textContent = `Area context for ${incident}`;
   civicContextBadge.textContent = "Available";
-  civicContextNote.textContent = "Supporting information only. It does not determine complaint severity or routing.";
+  civicContextNote.textContent = `Results relate the image-detected problem to ${area}. Supporting information does not determine severity or routing.`;
   civicContextResults.hidden = false;
   civicContextResults.innerHTML = `
     <section>

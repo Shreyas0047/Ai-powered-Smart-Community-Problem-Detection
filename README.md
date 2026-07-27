@@ -114,7 +114,7 @@ This section maps the implemented software features to their purpose and is suit
 
 - **Weatherstack context:** **Check Weather** explicitly retrieves current local conditions before submission and stores a short-lived server-owned draft snapshot.
 - **Weather cache:** Nearby coordinates and equivalent Bengaluru area names reuse MongoDB-cached observations for 45 minutes by default.
-- **Civic context after image analysis:** **Check Civic Context** unlocks only after image analysis completes, then uses the analyzed incident and Bengaluru location to find official resources and recent area updates.
+- **Image-grounded area context:** **Check Civic Context** unlocks only after image analysis completes, then searches using the exact detected issue, related visible problems, hazards, affected infrastructure, and Bengaluru area to find relevant official resources and recent local updates.
 - **Official and public result separation:** Configured civic/government domains are marked as verified official sources; other relevant results remain supporting public context and never control routing or severity.
 - **Search cache:** Equivalent area/category searches are cached to reduce external usage.
 - **Global monthly quotas:** Atomic MongoDB counters cap Weatherstack at 90 and Zenserp at 48 attempted external calls per UTC calendar month by default.
@@ -339,7 +339,7 @@ The EC2 container preloads Florence before Gunicorn accepts traffic. Once <code>
 | <code>ZENSERP_MONTHLY_LIMIT=48</code> | Global UTC monthly Zenserp cap |
 | <code>ZENSERP_PUBLIC_CACHE_HOURS=6</code> | Reuse recent area and category context |
 
-The report form calls Weatherstack only when the user presses **Check Weather**. **Check Civic Context** becomes available after terminal image analysis and makes one combined Zenserp search using the server-retained analysis and Bengaluru location. Successful checks receive opaque, user-bound draft tokens that expire after two hours; complaint submission validates those tokens and stores their snapshots without calling either provider. Changing the report location invalidates checked context in the browser. Cached results do not consume monthly provider allowance, and skipping, exhausting, or failing either provider never prevents complaint submission.
+The report form calls Weatherstack only when the user presses **Check Weather**. **Check Civic Context** becomes available after terminal image analysis and makes one combined Zenserp search from server-retained visual observations: the primary and secondary issues, visible hazards, affected infrastructure, and entered Bengaluru area. The UI identifies which image-detected incident and area produced the results. Successful checks receive opaque, user-bound draft tokens that expire after two hours; complaint submission validates those tokens and stores their snapshots without calling either provider. Changing the report location invalidates checked context in the browser. Cached results do not consume monthly provider allowance, and skipping, exhausting, or failing either provider never prevents complaint submission.
 
 ### Authority Adapter
 

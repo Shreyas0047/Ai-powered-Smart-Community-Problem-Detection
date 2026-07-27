@@ -12,7 +12,11 @@ const {
   buildWeatherCacheKey,
   isWeatherRelevant
 } = require("../src/services/weatherService");
-const { isOfficialLooking } = require("../src/services/civicEvidenceService");
+const {
+  buildPreviewQuery,
+  extractVisualSearchContext,
+  isOfficialLooking
+} = require("../src/services/civicEvidenceService");
 
 const root = path.join(__dirname, "..");
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -64,6 +68,37 @@ assert.strictEqual(
 assert.strictEqual(isOfficialLooking({ url: "https://site.bbmp.gov.in/department" }), true);
 assert.strictEqual(isOfficialLooking({ url: "https://bbmp.gov.in.example.com/not-official" }), false);
 assert.strictEqual(isOfficialLooking({ url: "https://example.com/bengaluru-news" }), false);
+
+const visualAnalysis = {
+  nlp: { issueType: "Utility Fault" },
+  cv: {
+    detected: "Electrical fault",
+    observations: {
+      detectedIssues: [
+        { issue: "Exposed electrical cable" },
+        { issue: "Short circuit with visible sparks" }
+      ],
+      hazards: ["Electric shock risk"],
+      affectedInfrastructure: ["Power distribution pole"]
+    }
+  }
+};
+assert.deepStrictEqual(extractVisualSearchContext(visualAnalysis), {
+  primaryIssue: "Exposed electrical cable",
+  relatedIssues: ["Short circuit with visible sparks", "Electrical fault"],
+  hazards: ["Electric shock risk"],
+  infrastructure: ["Power distribution pole"]
+});
+const visualQuery = buildPreviewQuery({ analysis: visualAnalysis, location: "Indiranagar, Bengaluru" });
+assert.match(visualQuery, /"Indiranagar, Bengaluru"/);
+assert.match(visualQuery, /"Exposed electrical cable"/);
+assert.match(visualQuery, /"Electric shock risk"/);
+assert.doesNotMatch(visualQuery, /Utility Fault/, "The broad NLP label must not replace specific image observations.");
+assert.doesNotMatch(
+  buildPreviewQuery({ analysis: visualAnalysis, location: "Indiranagar\" site:example.com" }),
+  /site:example\.com/,
+  "Search operators must be removed from preview input."
+);
 
 const routes = read("src/routes/api.js");
 const app = read("src/app.js");

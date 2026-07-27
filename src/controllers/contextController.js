@@ -126,6 +126,9 @@ function publicCivicEvidence(evidence = {}) {
   return {
     status: evidence.status,
     reason,
+    incidentSummary: String(evidence.incidentSummary || ""),
+    searchArea: String(evidence.searchArea || ""),
+    basedOnImageAnalysis: Boolean(evidence.basedOnImageAnalysis),
     officialSources: Array.isArray(evidence.officialSources) ? evidence.officialSources : [],
     publicContext: Array.isArray(evidence.publicContext) ? evidence.publicContext : []
   };

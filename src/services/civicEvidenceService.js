@@ -35,16 +35,68 @@ function normalizeSearchValue(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function normalizeSearchTerm(value) {
+  return normalizeSearchValue(value)
+    .replace(/["`]/g, " ")
+    .replace(/\b(?:site|inurl|intitle|filetype):/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 180);
+}
+
+function uniqueSearchValues(values, limit = 3) {
+  const seen = new Set();
+  return values
+    .map(normalizeSearchTerm)
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
+}
+
+function extractVisualSearchContext(analysis = {}) {
+  const observations = analysis?.cv?.observations || {};
+  const detectedIssues = Array.isArray(observations.detectedIssues) ? observations.detectedIssues : [];
+  const issues = uniqueSearchValues([
+    ...detectedIssues.map((item) => item?.issue || item?.categoryLabel),
+    ...(Array.isArray(observations.visibleCivicIssues) ? observations.visibleCivicIssues : []),
+    analysis?.cv?.detected,
+    analysis?.nlp?.issueType
+  ], 3);
+  const hazards = uniqueSearchValues(
+    Array.isArray(observations.hazards) ? observations.hazards : [],
+    2
+  );
+  const infrastructure = uniqueSearchValues([
+    ...(Array.isArray(observations.affectedInfrastructure) ? observations.affectedInfrastructure : []),
+    ...(Array.isArray(observations.damagedInfrastructure) ? observations.damagedInfrastructure : [])
+  ], 2);
+
+  return {
+    primaryIssue: issues[0] || "civic issue",
+    relatedIssues: issues.slice(1),
+    hazards,
+    infrastructure
+  };
+}
+
 function buildPreviewQuery({ analysis, location }) {
-  const issueType = normalizeSearchValue(analysis?.nlp?.issueType || analysis?.cv?.detected || "civic issue");
-  const department = normalizeSearchValue(analysis?.nlp?.team || "");
-  const area = normalizeSearchValue(location || "Bengaluru");
+  const visual = extractVisualSearchContext(analysis);
+  const area = normalizeSearchTerm(location || "Bengaluru");
+  const problemTerms = uniqueSearchValues([
+    visual.primaryIssue,
+    ...visual.relatedIssues,
+    ...visual.infrastructure,
+    ...visual.hazards
+  ], 6);
   return [
-    area,
-    issueType,
-    department,
-    "BBMP BESCOM BWSSB official civic update public report"
-  ].filter(Boolean).join(" ");
+    `"${area}"`,
+    ...problemTerms.map((term) => `"${term}"`),
+    "Bengaluru recent incident complaint official update"
+  ].join(" ").slice(0, 420);
 }
 
 function extractHost(url) {
@@ -131,7 +183,7 @@ async function callZenserp(query, sourceType, cacheOptions = {}) {
   try {
     const url = new URL(env.zenserpBaseUrl);
     url.searchParams.set("q", query);
-    url.searchParams.set("num", "5");
+    url.searchParams.set("num", "8");
     url.searchParams.set("gl", "in");
     url.searchParams.set("hl", "en");
 
@@ -199,11 +251,14 @@ async function fetchCivicEvidencePreview({ analysis, location }) {
     return unavailableEvidence("unavailable", "Civic context is not configured.");
   }
 
+  const visualContext = extractVisualSearchContext(analysis);
   const query = buildPreviewQuery({ analysis, location });
   const cacheKey = buildExternalCacheKey([
     "zenserp",
     "civic_preview",
-    analysis?.aiMeta?.categoryId || analysis?.nlp?.issueType || analysis?.cv?.detected,
+    visualContext.primaryIssue,
+    ...visualContext.relatedIssues,
+    ...visualContext.infrastructure,
     normalizeCachePart(location),
     new Date().toISOString().slice(0, 10)
   ]);
@@ -211,7 +266,7 @@ async function fetchCivicEvidencePreview({ analysis, location }) {
     cacheKey,
     ttlMs: env.zenserpPublicCacheHours * 60 * 60 * 1000
   });
-  const normalized = result.results.slice(0, 5);
+  const normalized = result.results.slice(0, 8);
   const officialSources = normalized
     .filter(isOfficialLooking)
     .map((item) => ({ ...item, sourceType: "official", official: true }))
@@ -225,6 +280,9 @@ async function fetchCivicEvidencePreview({ analysis, location }) {
     status: officialSources.length || publicContext.length ? "available" : result.status,
     provider: "zenserp",
     reason: officialSources.length || publicContext.length ? "" : result.reason,
+    incidentSummary: visualContext.primaryIssue,
+    searchArea: normalizeSearchValue(location || "Bengaluru"),
+    basedOnImageAnalysis: true,
     officialSources,
     publicContext,
     quota: result.quota
@@ -233,6 +291,7 @@ async function fetchCivicEvidencePreview({ analysis, location }) {
 
 module.exports = {
   buildPreviewQuery,
+  extractVisualSearchContext,
   fetchCivicEvidencePreview,
   isOfficialLooking
 };

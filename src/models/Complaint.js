@@ -124,6 +124,9 @@ const complaintSchema = new mongoose.Schema(
       status: { type: String, default: "unavailable" },
       provider: { type: String, default: "zenserp" },
       reason: { type: String, default: "" },
+      incidentSummary: { type: String, default: "" },
+      searchArea: { type: String, default: "" },
+      basedOnImageAnalysis: { type: Boolean, default: false },
       quota: mongoose.Schema.Types.Mixed,
       officialSources: [
         {
