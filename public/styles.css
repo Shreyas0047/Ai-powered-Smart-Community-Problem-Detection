@@ -7927,3 +7927,697 @@ body.auth-screen-active .chatbot-panel {
     grid-template-columns: 1fr;
   }
 }
+
+/* Balanced responsive parity layer.
+   Desktop remains the default; these rules only adapt tablet and phone layouts. */
+@media (max-width: 920px) {
+  :root {
+    --responsive-gutter: 16px;
+    --responsive-panel-padding: clamp(18px, 4vw, 24px);
+  }
+
+  html {
+    scroll-padding-top: 92px;
+  }
+
+  body {
+    min-width: 320px;
+  }
+
+  .topbar {
+    top: max(10px, env(safe-area-inset-top));
+    width: calc(100% - (var(--responsive-gutter) * 2));
+    min-height: 60px;
+    margin-top: max(10px, env(safe-area-inset-top));
+    padding: 8px 10px 8px 14px;
+    border-radius: 20px;
+  }
+
+  .project-logo-nav {
+    width: 108px;
+    margin-inline: -8px -6px;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-grid;
+    flex: 0 0 44px;
+    place-items: center;
+  }
+
+  .mobile-menu-toggle span {
+    grid-area: 1 / 1;
+    margin: 0;
+    transition: transform 180ms ease, opacity 160ms ease;
+  }
+
+  .mobile-menu-toggle span:first-child {
+    transform: translateY(-6px);
+  }
+
+  .mobile-menu-toggle span:last-child {
+    transform: translateY(6px);
+  }
+
+  .mobile-menu-toggle[aria-expanded="true"] span:first-child {
+    transform: rotate(45deg);
+  }
+
+  .mobile-menu-toggle[aria-expanded="true"] span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .mobile-menu-toggle[aria-expanded="true"] span:last-child {
+    transform: rotate(-45deg);
+  }
+
+  .site-nav {
+    top: calc(100% + 8px);
+    right: 0;
+    left: 0;
+    max-height: calc(100dvh - 96px - env(safe-area-inset-bottom));
+    padding: 10px;
+    gap: 3px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 18px;
+  }
+
+  .site-nav .nav-link {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 12px;
+  }
+
+  .site-nav .nav-link:is(.is-active, [aria-current="page"]) {
+    color: #dbe6ff;
+    background: rgba(143, 182, 255, 0.1);
+  }
+
+  .site-nav .nav-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-top: 8px;
+    margin-top: 5px;
+    border-top: 1px solid rgba(205, 218, 245, 0.1);
+  }
+
+  .site-nav .nav-actions > * {
+    width: 100%;
+  }
+
+  .content-shell {
+    width: calc(100% - (var(--responsive-gutter) * 2));
+    margin-top: 30px;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    gap: 52px;
+  }
+
+  .section-shell,
+  .section-subpanel,
+  .ops-panel,
+  .map-panel,
+  .management-panel {
+    min-width: 0;
+  }
+
+  .section-shell {
+    padding: var(--responsive-panel-padding);
+    border-radius: 22px;
+  }
+
+  .section-head,
+  .panel-titlebar,
+  .draft-toolbar,
+  .live-map-head,
+  .authority-governance-head,
+  .observability-head,
+  .community-cases-head {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .section-head > div,
+  .panel-titlebar > div,
+  .weather-preview-head > div {
+    min-width: 0;
+  }
+
+  .section-head h1,
+  .section-head h2,
+  .section-head p,
+  .panel-titlebar,
+  .weather-preview-head strong {
+    overflow-wrap: anywhere;
+  }
+
+  .about-home-head h1 {
+    max-width: 17ch;
+    font-size: clamp(2.8rem, 8vw, 4.9rem);
+  }
+
+  .about-video-experience,
+  .about-video-experience[data-compact="true"] {
+    height: auto;
+    min-height: 0;
+  }
+
+  .about-video-sticky,
+  .about-video-experience[data-compact="true"] .about-video-sticky {
+    position: relative;
+    top: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 22px;
+  }
+
+  .about-video-frame,
+  .about-video-experience[data-compact="true"] .about-video-frame {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    transform: none;
+    border-radius: inherit;
+    will-change: auto;
+  }
+
+  .about-video-title {
+    padding: 20px;
+    gap: 8px;
+    align-items: flex-start;
+    justify-content: flex-end;
+    font-size: clamp(2rem, 7vw, 4rem);
+    text-align: left;
+  }
+
+  .about-video-title span {
+    opacity: 1 !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .about-video-backdrop,
+  .about-video-scroll-cue {
+    display: none;
+  }
+
+  .home-brief,
+  .home-audience,
+  .home-boundary,
+  .home-principles,
+  .command-grid,
+  .ops-grid,
+  .map-management-grid,
+  .session-ribbon,
+  .operations-map-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-process-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .about-process-step:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .report-form,
+  .complaint-input-panel,
+  .close-contacts-form {
+    min-width: 0;
+  }
+
+  .location-input-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .location-input-row input {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+
+  .location-input-row button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .weather-preview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-actions,
+  .voice-recording-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .form-actions > *,
+  .voice-recording-toolbar > button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .form-actions > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .voice-recording-toolbar .recording-indicator {
+    grid-column: 1 / -1;
+  }
+
+  .list-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .list-toolbar input {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+
+  .list-toolbar :is(select, button) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .metric-ribbon,
+  .insight-grid,
+  .external-context-usage,
+  .authority-governance-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map-summary-ribbon {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .table-row,
+  .issue-card,
+  .community-case-card,
+  .authority-governance-ticket {
+    min-width: 0;
+  }
+
+  .status-actions,
+  .user-admin-actions,
+  .authority-ticket-actions,
+  .verification-actions {
+    align-items: stretch;
+  }
+
+  .status-actions :is(select, button),
+  .user-admin-actions :is(select, button) {
+    min-height: 44px;
+  }
+
+  .complaints-map-canvas,
+  .live-map-panel {
+    min-height: 340px;
+  }
+
+  .overlay-shell {
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+
+  .overlay-panel,
+  .faq-panel,
+  .post-submit-modal,
+  .location-preview-modal {
+    max-width: 100%;
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .location-preview-frame {
+    min-height: min(58dvh, 520px);
+  }
+
+  .chatbot-panel {
+    max-height: calc(100dvh - 96px - env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --responsive-gutter: 8px;
+    --responsive-panel-padding: 16px;
+  }
+
+  html {
+    scroll-padding-top: 80px;
+  }
+
+  .topbar {
+    top: max(6px, env(safe-area-inset-top));
+    width: calc(100% - 16px);
+    min-height: 56px;
+    margin-top: max(6px, env(safe-area-inset-top));
+    padding: 6px 7px 6px 12px;
+    border-radius: 18px;
+  }
+
+  .project-logo-nav {
+    width: 94px;
+  }
+
+  .site-nav {
+    max-height: calc(100dvh - 78px - env(safe-area-inset-bottom));
+  }
+
+  .content-shell {
+    margin-top: 22px;
+    gap: 36px;
+  }
+
+  .section-shell {
+    border-radius: 18px;
+  }
+
+  .section-subpanel,
+  .ops-panel,
+  .map-panel,
+  .management-panel,
+  .session-card {
+    padding: 15px;
+    border-radius: 16px;
+  }
+
+  .section-head {
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .section-head h1,
+  .about-home-head h1 {
+    max-width: 100%;
+    font-size: clamp(2.25rem, 10.5vw, 3.6rem);
+    line-height: 1;
+    text-wrap: balance;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.65rem, 7vw, 2.25rem);
+    line-height: 1.08;
+  }
+
+  .about-home-summary,
+  .about-lead,
+  .hero-text {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .about-video-sticky,
+  .about-video-frame {
+    border-radius: 16px;
+  }
+
+  .about-video-frame {
+    aspect-ratio: 4 / 3;
+  }
+
+  .about-video-frame video {
+    object-position: 68% center;
+  }
+
+  .about-video-title {
+    padding: 14px;
+    font-size: clamp(1.7rem, 9vw, 2.7rem);
+  }
+
+  .home-brief-notes > div,
+  .home-audience > article,
+  .home-principles article,
+  .about-process-step {
+    padding: 16px 0;
+  }
+
+  .about-process-track,
+  .home-audience,
+  .home-principles,
+  .home-boundary-copy,
+  .close-contact-grid,
+  .civic-context-results,
+  .detail-support-grid,
+  .community-cases-grid,
+  .civic-intelligence-deck,
+  .authority-governance-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-process-step:last-child {
+    grid-column: auto;
+  }
+
+  :is(input, textarea, select) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  textarea {
+    min-height: 104px;
+  }
+
+  .location-input-row,
+  .form-actions,
+  .voice-recording-toolbar,
+  .list-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .location-input-row > *,
+  .form-actions > *,
+  .voice-recording-toolbar > *,
+  .list-toolbar > *,
+  .form-actions > :first-child,
+  .list-toolbar input {
+    grid-column: 1;
+  }
+
+  .weather-preview-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .weather-preview-badge {
+    align-self: flex-start;
+  }
+
+  .weather-preview-metrics,
+  .metric-ribbon,
+  .insight-grid,
+  .external-context-usage,
+  .authority-governance-metrics,
+  .observability-grid,
+  .map-summary-ribbon,
+  .report-result-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .weather-preview-metrics div,
+  .metric-card,
+  .insight-card,
+  .map-summary-card {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .metric-card strong {
+    font-size: 26px;
+  }
+
+  .panel-titlebar,
+  .draft-toolbar,
+  .live-map-head,
+  .authority-governance-head,
+  .observability-head,
+  .community-cases-head,
+  .human-review-heading,
+  .human-review-submit-row,
+  .authority-manual-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .draft-toolbar .chip-button,
+  .section-head > .chip-button {
+    align-self: flex-start;
+  }
+
+  .issue-card-head,
+  .detail-hero-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-actions,
+  .user-admin-actions,
+  .authority-ticket-actions,
+  .verification-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .status-actions > *,
+  .user-admin-actions > *,
+  .authority-ticket-actions > *,
+  .verification-actions > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-row {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-wrap: anywhere;
+  }
+
+  .mini-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mini-item :is(strong, .mini-item-location, .mini-item-meta) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .complaints-map-canvas,
+  .live-map-panel {
+    min-height: 300px;
+  }
+
+  .overlay-shell {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .overlay-panel,
+  .faq-panel,
+  .post-submit-modal,
+  .location-preview-modal {
+    width: 100%;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .faq-panel,
+  .post-submit-modal,
+  .location-preview-modal {
+    padding:
+      max(16px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+
+  .overlay-head {
+    gap: 12px;
+  }
+
+  .overlay-head h2 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+  }
+
+  .location-preview-frame {
+    min-height: 58dvh;
+  }
+
+  .page-footer {
+    margin-inline: 8px;
+    margin-bottom: max(8px, env(safe-area-inset-bottom));
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .chatbot-panel {
+    right: 8px !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: 8px !important;
+    top: auto !important;
+    width: auto;
+    height: min(620px, calc(100dvh - 80px - env(safe-area-inset-bottom)));
+    max-height: none;
+    border-radius: 20px;
+  }
+
+  .chatbot-header {
+    min-height: 62px;
+  }
+
+  .chatbot-form textarea {
+    min-height: 92px;
+  }
+
+  .chatbot-composer-controls {
+    gap: 8px;
+  }
+
+  .chatbot-composer-foot {
+    display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .weather-preview-metrics,
+  .metric-ribbon,
+  .insight-grid,
+  .external-context-usage,
+  .authority-governance-metrics,
+  .observability-grid,
+  .map-summary-ribbon,
+  .report-result-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .site-nav .nav-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 920px) and (hover: none) and (pointer: coarse) {
+  .topbar,
+  .site-nav,
+  .section-shell,
+  .section-subpanel,
+  .overlay-panel,
+  .chatbot-panel,
+  .table-row,
+  .issue-card,
+  .metric-card {
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    backdrop-filter: blur(16px) saturate(120%);
+  }
+
+  [data-reveal] {
+    transition-duration: 360ms;
+  }
+
+  .chatbot-launcher-pulse,
+  .radar-map-wave {
+    animation: none;
+  }
+}
+
+@media (max-width: 920px) and (max-height: 560px) {
+  .site-nav {
+    max-height: calc(100dvh - 72px);
+  }
+
+  .chatbot-panel {
+    height: calc(100dvh - 16px);
+  }
+}

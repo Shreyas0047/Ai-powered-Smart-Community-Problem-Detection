@@ -36,6 +36,7 @@
     "verify:benchmark-comparison": "python3 scripts/verifyBenchmarkComparison.py",
     "verify:authority-tickets": "node scripts/verifyAuthorityTickets.js",
     "verify:external-context": "node scripts/verifyExternalContext.js",
+    "verify:responsive-ui": "node scripts/verifyResponsiveUi.js",
     "verify:accessibility": "node scripts/verifyAccessibility.js",
     "verify:resilience": "node scripts/verifyResilience.js",
     "verify:load": "node scripts/verifyLoad.js",

@@ -956,6 +956,7 @@ function toggleMobileMenu(forceState) {
   const nextState = typeof forceState === "boolean" ? forceState : !siteNav.classList.contains("is-open");
   siteNav.classList.toggle("is-open", nextState);
   mobileMenuToggle.setAttribute("aria-expanded", String(nextState));
+  mobileMenuToggle.setAttribute("aria-label", nextState ? "Close navigation" : "Open navigation");
 }
 
 function setupMobileMenu() {
@@ -969,8 +970,25 @@ function setupMobileMenu() {
     link.addEventListener("click", () => toggleMobileMenu(false));
   });
 
+  document.addEventListener("pointerdown", (event) => {
+    if (
+      siteNav.classList.contains("is-open") &&
+      !siteNav.contains(event.target) &&
+      !mobileMenuToggle.contains(event.target)
+    ) {
+      toggleMobileMenu(false);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && siteNav.classList.contains("is-open")) {
+      toggleMobileMenu(false);
+      mobileMenuToggle.focus();
+    }
+  });
+
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 720) {
+    if (window.innerWidth > 920) {
       toggleMobileMenu(false);
     }
     updateTubelightNav();
@@ -1012,6 +1030,7 @@ function setupAboutVideoExperience() {
   const titleRight = document.getElementById("aboutVideoTitleRight");
   const scrollCue = document.getElementById("aboutVideoScrollCue");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const compactLayout = window.matchMedia("(max-width: 920px)");
 
   if (!experience || !sticky || !frame || !video || !titleLeft || !titleRight || !scrollCue) {
     return;
@@ -1055,6 +1074,21 @@ function setupAboutVideoExperience() {
       return;
     }
 
+    if (compactLayout.matches) {
+      experience.dataset.compact = "true";
+      experience.dataset.expanded = "true";
+      experience.style.removeProperty("--about-video-progress");
+      frame.style.removeProperty("width");
+      frame.style.removeProperty("height");
+      titleLeft.style.removeProperty("transform");
+      titleRight.style.removeProperty("transform");
+      titleLeft.style.removeProperty("opacity");
+      titleRight.style.removeProperty("opacity");
+      scrollCue.style.removeProperty("opacity");
+      return;
+    }
+
+    delete experience.dataset.compact;
     const rect = experience.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const stickyTop = Math.min(104, viewportHeight * 0.12);
@@ -1113,8 +1147,12 @@ function setupAboutVideoExperience() {
     viewObserver.observe(aboutView, { attributes: true, attributeFilter: ["hidden"] });
   }
 
-  window.addEventListener("scroll", queueRender, { passive: true });
+    const handleScroll = () => {
+      if (!compactLayout.matches) queueRender();
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", queueRender);
+  compactLayout.addEventListener?.("change", queueRender);
   document.addEventListener("visibilitychange", syncPlayback);
   queueRender();
 }

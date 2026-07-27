@@ -18,6 +18,7 @@ const checks = [
   ["benchmark-comparison", "python3", ["scripts/verifyBenchmarkComparison.py"]],
   ["authority-tickets", "node", ["scripts/verifyAuthorityTickets.js"]],
   ["external-context", "node", ["scripts/verifyExternalContext.js"]],
+  ["responsive-ui", "node", ["scripts/verifyResponsiveUi.js"]],
   ["accessibility", "node", ["scripts/verifyAccessibility.js"]],
   ["resilience", "node", ["scripts/verifyResilience.js"]],
   ["load", "node", ["scripts/verifyLoad.js"]],

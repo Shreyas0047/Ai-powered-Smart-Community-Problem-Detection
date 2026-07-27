@@ -86,6 +86,8 @@ This section maps the implemented software features to their purpose and is suit
 - **Weather-sensitive guidance:** Rain and wind context can add cautious guidance for drainage, flooding, sewage, electrical, fire, fallen-tree, road, vehicle, and water-leak complaints.
 - **Inline submission progress:** The form reports evidence analysis, hazard review, ward selection, department routing, checked-context reuse, persistence, and completion without opening a separate result window.
 - **Portable complaint record:** After submission, users can generate a PDF, email the authority, and notify up to five chosen contacts.
+- **Adaptive reporting workspace:** Desktop keeps the full information-rich composition, while tablet and phone layouts reflow navigation, location tools, evidence, progress, complaint details, and actions without hiding core functionality.
+- **Mobile-safe interaction:** Compact layouts use touch-sized controls, safe-area spacing, full-height dialogs, keyboard-safe form sizing, and a static video presentation that avoids scroll-linked rendering work.
 
 ### Civic Intelligence And Safety
 
@@ -384,6 +386,7 @@ npm run verify:release
 | --- | --- |
 | <code>npm run verify:syntax</code> | JavaScript syntax and application loading |
 | <code>npm run verify:accessibility</code> | Dialogs, labels, IDs, feedback, reduced motion |
+| <code>npm run verify:responsive-ui</code> | Desktop preservation, tablet/phone breakpoints, safe areas, compact media, and mobile navigation |
 | <code>npm run verify:image-reasoning</code> | Image decision behavior and uncertainty |
 | <code>npm run verify:florence-remote</code> | Cloud provider contract, timeout, cache, authentication |
 | <code>npm run verify:florence-service</code> | Standalone Florence service |
