@@ -135,6 +135,9 @@ assert.match(frontend, /checkCivicContextBtn\?\.addEventListener\("click", reque
 assert.match(frontend, /imageAnalysisToken: currentImageAnalysisToken/);
 assert.match(frontend, /payload\.weatherContextToken = currentWeatherContextToken/);
 assert.match(frontend, /payload\.civicContextToken = currentCivicContextToken/);
+assert.match(frontend, /function resetWeatherPreview[\s\S]{0,320}checkWeatherBtn\.disabled = false/);
+assert.match(frontend, /if \(weatherPreviewPanel\.dataset\.state !== "idle"\)/);
+assert.match(frontend, /\["loading", "available", "unavailable"\]\.includes\(civicContextPanel\.dataset\.state\)/);
 assert.doesNotMatch(frontend, /reportLocationInput\.addEventListener\("blur"[\s\S]{0,240}requestWeatherPreview/);
 const mapPreviewStart = frontend.indexOf("function showTypedLocationOnMap()");
 const mapPreviewEnd = frontend.indexOf("function closeLocationPreview()", mapPreviewStart);

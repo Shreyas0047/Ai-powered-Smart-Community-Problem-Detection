@@ -1631,6 +1631,7 @@ function resetWeatherPreview(message = "Add a location, then press Check Weather
   lastWeatherPreviewLocation = "";
   activeWeatherPreviewLocation = "";
   currentWeatherContextToken = "";
+  checkWeatherBtn.disabled = false;
   weatherPreviewPanel.dataset.state = "idle";
   weatherPreviewTitle.textContent = "Add a location to check current conditions";
   weatherPreviewBadge.textContent = "Not checked";
@@ -5500,11 +5501,10 @@ emailBbmpBtn.addEventListener("click", async () => {
 reportLocationInput.addEventListener("input", (event) => {
   currentReportMapLocation = null;
   updateLiveLocationMap(event.target.value);
-  const currentLocationKey = `${event.target.value.trim()}||`;
-  if (lastWeatherPreviewLocation && lastWeatherPreviewLocation !== currentLocationKey) {
+  if (weatherPreviewPanel.dataset.state !== "idle") {
     resetWeatherPreview("Location changed. Press Check Weather to retrieve the new conditions.");
   }
-  if (currentCivicContextToken) {
+  if (["loading", "available", "unavailable"].includes(civicContextPanel.dataset.state)) {
     resetCivicContext({
       imageReady: Boolean(currentImageAnalysisToken),
       message: "Location changed. Check civic context again for the new location."
