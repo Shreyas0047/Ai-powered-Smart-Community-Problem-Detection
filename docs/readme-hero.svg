@@ -1,81 +1,184 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
-  <title id="title">Urban Pulse AI</title>
-  <desc id="desc">Animated civic intelligence network connecting reports, AI analysis, routing, and response.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Urban Pulse AI civic reporting for Bengaluru</title>
+  <desc id="desc">A citizen report moves from image evidence through civic intelligence to Bengaluru ward and department response.</desc>
+
   <defs>
-    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#08101c"/>
-      <stop offset="0.55" stop-color="#111c2b"/>
-      <stop offset="1" stop-color="#07130f"/>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111e"/>
+      <stop offset="0.52" stop-color="#0e1c2c"/>
+      <stop offset="1" stop-color="#0b211d"/>
     </linearGradient>
-    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#7aa7ff" stop-opacity="0"/>
-      <stop offset="0.5" stop-color="#9bc0ff" stop-opacity="0.8"/>
-      <stop offset="1" stop-color="#65e0a3" stop-opacity="0"/>
+    <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#77a7ff" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#61dca1" stop-opacity="0"/>
     </linearGradient>
-    <radialGradient id="glow">
-      <stop offset="0" stop-color="#7aa7ff" stop-opacity="0.32"/>
-      <stop offset="1" stop-color="#7aa7ff" stop-opacity="0"/>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.13"/>
+      <stop offset="0.48" stop-color="#b8d1ff" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.015"/>
+    </linearGradient>
+    <linearGradient id="route" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#77a7ff"/>
+      <stop offset="0.56" stop-color="#85c6ff"/>
+      <stop offset="1" stop-color="#61dca1"/>
+    </linearGradient>
+    <radialGradient id="blueGlow">
+      <stop offset="0" stop-color="#5796ff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#5796ff" stop-opacity="0"/>
     </radialGradient>
-    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M40 0H0V40" fill="none" stroke="#b8c9e8" stroke-opacity="0.055"/>
+    <radialGradient id="greenGlow">
+      <stop offset="0" stop-color="#61dca1" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#61dca1" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#c6d7f4" stroke-opacity="0.035"/>
     </pattern>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="photoClip">
+      <rect x="566" y="136" width="142" height="112" rx="13"/>
+    </clipPath>
   </defs>
 
-  <rect width="1200" height="360" rx="28" fill="url(#background)"/>
-  <rect width="1200" height="360" rx="28" fill="url(#grid)"/>
-  <circle cx="930" cy="160" r="230" fill="url(#glow)" opacity="0.5">
-    <animate attributeName="opacity" values="0.25;0.55;0.25" dur="7s" repeatCount="indefinite"/>
+  <rect width="1200" height="420" rx="30" fill="url(#sky)"/>
+  <rect width="1200" height="420" rx="30" fill="url(#grid)"/>
+  <ellipse cx="790" cy="188" rx="360" ry="260" fill="url(#blueGlow)"/>
+  <ellipse cx="1110" cy="316" rx="250" ry="190" fill="url(#greenGlow)"/>
+  <path d="M0 286C210 250 392 286 566 262S923 224 1200 272V420H0Z" fill="url(#horizon)"/>
+
+  <!-- Bengaluru skyline, anchored by a simplified Vidhana Soudha silhouette. -->
+  <g fill="#101f2d" stroke="#9bb6d8" stroke-opacity="0.12" stroke-width="1">
+    <path d="M0 338V304h34v-34h24v68h22v-92h39v92h25v-54h54v54h22v-106h42v106h26v-72h54v72h30v-122h34v122h25v-84h45v84Z"/>
+    <path d="M786 338v-48h22v-21h18v-18h16v-17h18v-22h11v-18h12v18h11v22h18v17h16v18h18v21h22v48Z"/>
+    <path d="M812 290h130M826 269h102M842 251h70M860 234h34" fill="none"/>
+    <path d="M1002 338v-76h32v76m16 0v-108h40v108m18 0v-62h38v62m18 0v-92h36v92"/>
+  </g>
+
+  <!-- Road and civic issue markers. -->
+  <path d="M0 368C214 332 405 385 594 351S952 328 1200 360" fill="none" stroke="#778aa3" stroke-opacity="0.2" stroke-width="2"/>
+  <path d="M18 380C220 345 410 395 602 363S950 340 1185 370" fill="none" stroke="#f3f7ff" stroke-opacity="0.14" stroke-width="1" stroke-dasharray="14 16"/>
+  <g transform="translate(310 334)">
+    <path d="M0 17h25l7 9h-43Z" fill="#050b12" stroke="#ffb36b" stroke-opacity="0.62"/>
+    <path d="M8 13 17 2l8 11Z" fill="#ffb36b" opacity="0.8"/>
+    <path d="M17 6v4m0 2v1" stroke="#14202e" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(1050 313)" stroke="#61dca1" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M0 19c9-15 18-15 27 0M7 19c5-8 9-8 14 0M13.5 19h1"/>
+  </g>
+
+  <!-- Product statement. -->
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <text x="62" y="74" fill="#84b0ff" font-size="13" font-weight="700" letter-spacing="3.4">BENGALURU CIVIC INTELLIGENCE</text>
+    <text x="58" y="145" fill="#f4f7fc" font-size="56" font-weight="680" letter-spacing="-2.2">Urban Pulse AI</text>
+    <text x="62" y="183" fill="#b5c0d1" font-size="18">Evidence becomes an accountable civic case.</text>
+
+    <g transform="translate(62 220)">
+      <rect width="122" height="34" rx="17" fill="#77a7ff" fill-opacity="0.1" stroke="#77a7ff" stroke-opacity="0.28"/>
+      <circle cx="18" cy="17" r="4" fill="#77a7ff"/>
+      <text x="31" y="22" fill="#cbdcff" font-size="12" font-weight="650">REPORT</text>
+    </g>
+    <g transform="translate(194 220)">
+      <rect width="134" height="34" rx="17" fill="#ffb36b" fill-opacity="0.08" stroke="#ffb36b" stroke-opacity="0.24"/>
+      <path d="M17 11v12m-6-6h12" stroke="#ffb36b" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="31" y="22" fill="#ffd0a4" font-size="12" font-weight="650">UNDERSTAND</text>
+    </g>
+    <g transform="translate(338 220)">
+      <rect width="108" height="34" rx="17" fill="#61dca1" fill-opacity="0.08" stroke="#61dca1" stroke-opacity="0.24"/>
+      <path d="m12 17 4 4 8-9" fill="none" stroke="#61dca1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="31" y="22" fill="#a7efca" font-size="12" font-weight="650">RESPOND</text>
+    </g>
+
+    <text x="62" y="301" fill="#718097" font-size="12" letter-spacing="1.3">IMAGE + VOICE + LOCATION</text>
+    <text x="62" y="328" fill="#d8e0ec" font-size="14">Ward routing  /  Safety review  /  Community verification</text>
+  </g>
+
+  <!-- Citizen evidence card. -->
+  <g>
+    <rect x="542" y="78" width="192" height="246" rx="25" fill="#07101a" stroke="#cfdeff" stroke-opacity="0.2"/>
+    <rect x="550" y="87" width="176" height="228" rx="19" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08"/>
+    <rect x="613" y="96" width="50" height="5" rx="2.5" fill="#dbe7fa" fill-opacity="0.2"/>
+    <text x="566" y="124" fill="#dce6f5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="650">NEW REPORT</text>
+
+    <g clip-path="url(#photoClip)">
+      <rect x="566" y="136" width="142" height="112" fill="#233747"/>
+      <rect x="566" y="204" width="142" height="44" fill="#17242e"/>
+      <path d="M566 215 708 191v57H566Z" fill="#2c3540"/>
+      <path d="M568 225 704 202" stroke="#e5eef8" stroke-opacity="0.28" stroke-width="2" stroke-dasharray="10 8"/>
+      <path d="M629 213c16-12 27-12 42 1-12 8-27 11-42-1Z" fill="#05090d" stroke="#ffb36b" stroke-opacity="0.7"/>
+      <path d="M579 136v61m105-61v47" stroke="#536979" stroke-width="5"/>
+      <path d="m579 159 24-17m81 16-22-16" stroke="#536979" stroke-width="3"/>
+      <path d="m683 163-16 29" stroke="#ffb36b" stroke-width="2"/>
+      <circle cx="683" cy="161" r="4" fill="#ffb36b" filter="url(#glow)">
+        <animate attributeName="opacity" values="0.45;1;0.45" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <rect x="566" y="262" width="142" height="32" rx="10" fill="#77a7ff" fill-opacity="0.12" stroke="#77a7ff" stroke-opacity="0.25"/>
+    <circle cx="582" cy="278" r="4" fill="#61dca1"/>
+    <text x="593" y="282" fill="#d6e3fa" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10">Evidence ready</text>
+    <circle cx="638" cy="305" r="3" fill="#8796aa"/>
+  </g>
+
+  <!-- Routed civic case. -->
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <rect x="782" y="58" width="356" height="266" rx="25" fill="url(#glass)" stroke="#d9e5ff" stroke-opacity="0.15"/>
+    <text x="806" y="88" fill="#8292aa" font-size="10" font-weight="700" letter-spacing="2">LIVE CIVIC CASE</text>
+    <circle cx="1107" cy="82" r="5" fill="#61dca1" filter="url(#glow)">
+      <animate attributeName="r" values="4;6;4" dur="2.6s" repeatCount="indefinite"/>
+    </circle>
+
+    <g transform="translate(806 106)">
+      <rect width="96" height="76" rx="15" fill="#07111c" fill-opacity="0.72" stroke="#77a7ff" stroke-opacity="0.18"/>
+      <path d="M18 51 31 36l11 8 17-25 18 16" fill="none" stroke="#7893b3" stroke-width="2"/>
+      <circle cx="59" cy="19" r="7" fill="#ffb36b" fill-opacity="0.14" stroke="#ffb36b"/>
+      <path d="M59 15v5m0 3v1" stroke="#ffb36b" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="17" y="66" fill="#bdc9da" font-size="9">VISIBLE ISSUE</text>
+    </g>
+
+    <path d="M918 144H970" fill="none" stroke="url(#route)" stroke-width="2" stroke-dasharray="6 6">
+      <animate attributeName="stroke-dashoffset" values="24;0" dur="1.8s" repeatCount="indefinite"/>
+    </path>
+    <circle cx="944" cy="144" r="4" fill="#84b0ff" filter="url(#glow)"/>
+
+    <g transform="translate(976 106)">
+      <rect width="138" height="76" rx="15" fill="#07111c" fill-opacity="0.72" stroke="#61dca1" stroke-opacity="0.2"/>
+      <path d="M19 28h16m-8-8v16" stroke="#61dca1" stroke-width="1.7" stroke-linecap="round"/>
+      <text x="45" y="27" fill="#e2eaf6" font-size="11" font-weight="650">WARD ROUTED</text>
+      <text x="19" y="48" fill="#8fa0b7" font-size="9">Department matched</text>
+      <text x="19" y="63" fill="#61dca1" font-size="9" font-weight="650">DELIVERY READY</text>
+    </g>
+
+    <line x1="806" y1="203" x2="1114" y2="203" stroke="#d9e5ff" stroke-opacity="0.1"/>
+
+    <g transform="translate(806 222)">
+      <circle cx="9" cy="9" r="9" fill="#77a7ff" fill-opacity="0.13"/>
+      <path d="m5 9 3 3 5-6" fill="none" stroke="#77a7ff" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="28" y="13" fill="#d5deec" font-size="11">Visual evidence reviewed</text>
+    </g>
+    <g transform="translate(806 253)">
+      <circle cx="9" cy="9" r="9" fill="#ffb36b" fill-opacity="0.12"/>
+      <path d="M9 4v6m0 3v1" stroke="#ffb36b" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="28" y="13" fill="#d5deec" font-size="11">Risk and urgency assessed</text>
+    </g>
+    <g transform="translate(806 284)">
+      <circle cx="9" cy="9" r="9" fill="#61dca1" fill-opacity="0.12"/>
+      <path d="M4 10c3-5 7-5 10 0M7 11c2-3 3-3 5 0" fill="none" stroke="#61dca1" stroke-width="1.2" stroke-linecap="round"/>
+      <text x="28" y="13" fill="#d5deec" font-size="11">Community status available</text>
+    </g>
+  </g>
+
+  <!-- Data route from evidence to case. -->
+  <path d="M734 200C755 200 758 191 782 191" fill="none" stroke="url(#route)" stroke-width="2.2" stroke-dasharray="5 7">
+    <animate attributeName="stroke-dashoffset" values="24;0" dur="1.7s" repeatCount="indefinite"/>
+  </path>
+  <circle cx="757" cy="196" r="4" fill="#84b0ff" filter="url(#glow)">
+    <animate attributeName="cx" values="742;774" dur="1.7s" repeatCount="indefinite"/>
   </circle>
 
-  <g fill="none" stroke="url(#line)" stroke-width="1.5">
-    <path d="M720 84C805 84 818 138 880 138S970 92 1062 92"/>
-    <path d="M720 180C800 180 822 180 880 180S982 180 1080 180"/>
-    <path d="M720 276C806 276 820 222 880 222S970 268 1062 268"/>
-  </g>
-
-  <g filter="url(#softGlow)">
-    <circle cx="720" cy="180" r="5" fill="#8fb6ff">
-      <animate attributeName="r" values="4;7;4" dur="2.8s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="880" cy="138" r="5" fill="#8fb6ff">
-      <animate attributeName="r" values="4;7;4" dur="2.8s" begin="0.6s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="880" cy="222" r="5" fill="#ffb874">
-      <animate attributeName="r" values="4;7;4" dur="2.8s" begin="1.2s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="1062" cy="92" r="5" fill="#65e0a3">
-      <animate attributeName="opacity" values="0.45;1;0.45" dur="2.4s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="1080" cy="180" r="5" fill="#65e0a3">
-      <animate attributeName="opacity" values="0.45;1;0.45" dur="2.4s" begin="0.8s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="1062" cy="268" r="5" fill="#65e0a3">
-      <animate attributeName="opacity" values="0.45;1;0.45" dur="2.4s" begin="1.6s" repeatCount="indefinite"/>
-    </circle>
-  </g>
-
-  <rect x="700" y="48" width="400" height="264" rx="22" fill="#ffffff" fill-opacity="0.025" stroke="#d9e5ff" stroke-opacity="0.12"/>
-  <rect x="700" y="48" width="4" height="264" rx="2" fill="#8fb6ff" opacity="0.75">
-    <animate attributeName="y" values="54;300;54" dur="6s" repeatCount="indefinite"/>
-    <animate attributeName="height" values="22;8;22" dur="6s" repeatCount="indefinite"/>
-  </rect>
-
-  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-    <text x="76" y="108" fill="#8fb6ff" font-size="14" font-weight="700" letter-spacing="4">BENGALURU CIVIC INTELLIGENCE</text>
-    <text x="72" y="182" fill="#f2f5fb" font-size="58" font-weight="650" letter-spacing="-2">Urban Pulse AI</text>
-    <text x="76" y="228" fill="#aeb9cb" font-size="20">From evidence to accountable civic response.</text>
-    <text x="76" y="286" fill="#65e0a3" font-size="14" font-weight="650">REPORT</text>
-    <text x="155" y="286" fill="#647187" font-size="14">/</text>
-    <text x="177" y="286" fill="#8fb6ff" font-size="14" font-weight="650">UNDERSTAND</text>
-    <text x="302" y="286" fill="#647187" font-size="14">/</text>
-    <text x="324" y="286" fill="#ffb874" font-size="14" font-weight="650">ROUTE</text>
-    <text x="390" y="286" fill="#647187" font-size="14">/</text>
-    <text x="412" y="286" fill="#65e0a3" font-size="14" font-weight="650">VERIFY</text>
-  </g>
-
-  <rect x="0.5" y="0.5" width="1199" height="359" rx="27.5" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+  <rect x="0.75" y="0.75" width="1198.5" height="418.5" rx="29.25" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5"/>
 </svg>

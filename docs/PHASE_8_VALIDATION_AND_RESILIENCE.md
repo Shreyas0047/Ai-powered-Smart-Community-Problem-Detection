@@ -26,7 +26,7 @@ The application now includes skip navigation, named dialogs, explicit button typ
 npm run verify:release
 ```
 
-This runs Phase 3 through Phase 8 checks plus resolution, civic intelligence, dataset governance, metrics, and AI-service regression checks. Real benchmark readiness remains a separate explicit gate because no software command can substitute for collecting and adjudicating representative data.
+This runs the Phase 1 through Phase 8 checks plus resolution, civic intelligence, provider contracts, and AI-service regression checks. Real benchmark readiness remains a separate explicit gate because no software command can substitute for collecting and adjudicating representative data.
 
 ## Required Manual Validation
 

@@ -1,7 +1,7 @@
 # Urban Pulse AI
 
 <p align="center">
-  <img src="docs/readme-hero.svg" alt="Urban Pulse AI civic intelligence network" width="100%" />
+  <img src="docs/readme-hero.svg" alt="Urban Pulse AI Bengaluru civic reporting and response workflow" width="100%" />
 </p>
 
 <p align="center">
