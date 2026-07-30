@@ -699,11 +699,12 @@ function closeAuthOverlay() {
     return;
   }
   authOverlay.hidden = true;
-  restoreDialogFocus(authOverlay);
   document.body.classList.remove("auth-screen-active");
   if (faqOverlay?.hidden !== false && complaintDetailOverlay?.hidden !== false) {
     document.body.classList.remove("auth-open");
   }
+  restoreDialogFocus(authOverlay);
+  synchronizeVisibleAppLayout();
 }
 
 function openFaqOverlay() {
@@ -880,6 +881,22 @@ function updateTubelightNav() {
   navTubelight.style.opacity = "1";
 }
 
+function synchronizeVisibleAppLayout() {
+  window.requestAnimationFrame(() => {
+    document.querySelectorAll("[data-reveal]").forEach((element) => {
+      if (!element.closest("[hidden]")) {
+        element.classList.add("is-visible");
+      }
+    });
+
+    updateTubelightNav();
+    window.UrbanPulseLiquidGlass?.refresh();
+
+    // Components initialized behind the auth screen need one visible layout pass.
+    window.dispatchEvent(new Event("resize"));
+  });
+}
+
 function activateAppView(viewName = "home", options = {}) {
   const { updateHash = true, message = "", scroll = true } = options;
   const nextView = viewTargets[viewName] ? viewName : "home";
@@ -937,6 +954,8 @@ function activateAppView(viewName = "home", options = {}) {
   if (message) {
     setDashboardMessage(message, "success");
   }
+
+  synchronizeVisibleAppLayout();
 }
 
 function goToMainDashboard() {
