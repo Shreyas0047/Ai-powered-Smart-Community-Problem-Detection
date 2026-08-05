@@ -244,7 +244,7 @@ Urban-Pulse-Ai/
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ or above
 - Python 3.11
 - MongoDB local or Atlas
 - npm
