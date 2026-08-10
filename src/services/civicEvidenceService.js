@@ -7,7 +7,7 @@ const {
 } = require("./externalContextCacheService");
 const { reserveMonthlyQuota } = require("./monthlyQuotaService");
 
-const ZENSERP_TIMEOUT_MS = 4500;
+const ZENSERP_TIMEOUT_MS = 9000;
 const OFFICIAL_DOMAIN_SUFFIXES = [
   "bbmp.gov.in",
   "site.bbmp.gov.in",
@@ -149,6 +149,22 @@ function extractOrganicResults(data) {
   return candidates.find(Array.isArray) || [];
 }
 
+function extractProviderError(data) {
+  const error = data?.error || data?.errors;
+  if (!error) return "";
+  if (typeof error === "string") return error;
+  if (Array.isArray(error)) {
+    return error
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item?.message || item?.detail || item?.title || "";
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+  return error.message || error.detail || error.title || "";
+}
+
 async function callZenserp(query, sourceType, cacheOptions = {}) {
   const cacheKey = cacheOptions.cacheKey || buildExternalCacheKey(["zenserp", sourceType, query]);
   const cached = await getCachedExternalContext({ provider: "zenserp", cacheKey });
@@ -189,19 +205,15 @@ async function callZenserp(query, sourceType, cacheOptions = {}) {
 
     const response = await fetch(url, {
       headers: {
-        apikey: env.zenserpApiKey,
-        "x-api-key": env.zenserpApiKey
+        apikey: env.zenserpApiKey
       },
       signal: controller.signal
     });
 
-    if (!response.ok) {
-      throw new Error(`Zenserp returned HTTP ${response.status}.`);
-    }
-
     const data = await response.json();
-    if (data?.error) {
-      throw new Error(typeof data.error === "string" ? data.error : data.error.message || "Zenserp returned an error.");
+    const providerError = extractProviderError(data);
+    if (!response.ok || providerError) {
+      throw new Error(providerError || `Zenserp returned HTTP ${response.status}.`);
     }
 
     const results = extractOrganicResults(data)

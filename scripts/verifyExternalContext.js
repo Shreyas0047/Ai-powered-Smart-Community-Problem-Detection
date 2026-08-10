@@ -121,6 +121,8 @@ assert.ok(
 );
 assert.match(civicEvidenceService, /zenserpPublicCacheHours/);
 assert.match(civicEvidenceService, /fetchCivicEvidencePreview/);
+assert.match(civicEvidenceService, /headers:\s*{\s*apikey: env\.zenserpApiKey\s*}/);
+assert.doesNotMatch(civicEvidenceService, /x-api-key/);
 assert.match(markup, /id="weatherPreviewPanel"/);
 assert.match(markup, /id="checkWeatherBtn"/);
 assert.match(markup, /id="checkCivicContextBtn"[\s\S]*disabled/);
