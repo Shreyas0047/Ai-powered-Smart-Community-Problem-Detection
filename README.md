@@ -25,7 +25,7 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 
 - [What It Does](#what-it-does)
 - [Feature Catalogue](#feature-catalogue)
-- [Reporting UI](#reporting-ui)
+- [Reporting Workflow](#reporting-workflow)
 - [Architecture](#architecture)
 - [Decision Boundaries](#decision-boundaries)
 - [Quick Start](#quick-start)
@@ -124,7 +124,7 @@ This section maps the implemented software features to their purpose and is suit
 - **Failure isolation:** Missing keys, quota exhaustion, malformed responses, timeouts, or empty results never block complaint creation.
 - **Chatbot assistance:** The authenticated assistant supports navigation, complaint questions, status guidance, and project FAQs with stored chat history and a clear-history action.
 
-## Reporting UI
+## Reporting Workflow
 
 <p align="center">
   <img src="report.png" alt="Urban Pulse AI reporting workflow screenshot placeholder" width="960" />
@@ -138,7 +138,7 @@ The report workspace provides immediate image-analysis states, a failure-only **
 
 ~~~mermaid
 flowchart LR
-    Citizen[Citizen / Admin] --> UI[Liquid-glass Web UI]
+    Citizen[Citizen / Admin] --> UI[Browser Client]
     UI --> API[Express API]
     API --> DB[(MongoDB Atlas)]
     API --> AI[Flask AI Service]
@@ -157,7 +157,7 @@ flowchart LR
 
 | Service | Owns |
 | --- | --- |
-| Browser UI | Authentication, reporting, image preparation, dashboards, maps, verification, and accessible feedback |
+| Browser client | Authentication, reporting, image preparation, dashboards, maps, verification, and accessible feedback |
 | Express API | Authentication, validation, persistence, quotas, routing, authority workflow, email, reports, and permissions |
 | Flask AI service | Florence observation integration, multimodal fusion, confidence calibration, threat reasoning, and human-review gates |
 | Florence on AWS EC2 | Sanitized image perception only; it cannot route, prioritize, accept, or close complaints |
@@ -216,7 +216,7 @@ Images are validated, resized, compressed, and hashed before Florence processing
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | Semantic HTML, CSS, JavaScript, React 19 bridge, liquid-glass-react |
+| Frontend | Semantic HTML, CSS, JavaScript, and a small React bridge for selected interactive components |
 | API | Node.js, Express, Mongoose, JWT |
 | AI | Python 3.11, Flask, sentence-transformers, structured Florence integration |
 | Vision | Florence-2 container, PyTorch CPU, AWS EC2 |
