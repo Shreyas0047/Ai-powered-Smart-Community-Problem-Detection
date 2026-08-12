@@ -26,6 +26,10 @@ if (process.env.NODE_ENV === "production" && jwtSecret === "smart-community-demo
   throw new Error("JWT_SECRET must be set to a strong secret in production.");
 }
 
+const selectedEmailProvider = String(process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? "resend" : "smtp"))
+  .trim()
+  .toLowerCase();
+
 const config = {
   port: numericEnv("PORT", 3000, { min: 1, max: 65535, integer: true }),
   publicDir: path.join(__dirname, "..", "..", "public"),
@@ -54,6 +58,9 @@ const config = {
   smtpUser: process.env.SMTP_USER || "",
   smtpPass: process.env.SMTP_PASS || "",
   smtpFrom: process.env.SMTP_FROM || process.env.SMTP_USER || "",
+  emailProvider: selectedEmailProvider,
+  resendApiKey: String(process.env.RESEND_API_KEY || "").trim(),
+  resendBaseUrl: String(process.env.RESEND_BASE_URL || "https://api.resend.com").trim(),
   bbmpEmailTo: process.env.BBMP_EMAIL_TO || "comm@bbmp.gov.in",
   authorityAdapter: String(process.env.AUTHORITY_ADAPTER || "disabled").trim().toLowerCase(),
   authorityWebhookUrl: String(process.env.AUTHORITY_WEBHOOK_URL || "").trim(),
@@ -70,12 +77,16 @@ const config = {
 
 function validateConfiguration(env = config) {
   if (![4, 6].includes(env.smtpFamily)) throw new Error("SMTP_FAMILY must be 4 or 6.");
+  if (!new Set(["smtp", "resend"]).has(env.emailProvider)) {
+    throw new Error("EMAIL_PROVIDER must be smtp or resend.");
+  }
   if (!new Set(["disabled", "email", "webhook"]).has(env.authorityAdapter)) {
     throw new Error("AUTHORITY_ADAPTER must be disabled, email, or webhook.");
   }
   assertUrl("AI_SERVICE_URL", env.aiServiceUrl, { allowHttp: process.env.NODE_ENV !== "production" });
   assertUrl("WEATHERSTACK_BASE_URL", env.weatherstackBaseUrl, { allowHttp: true });
   assertUrl("ZENSERP_BASE_URL", env.zenserpBaseUrl);
+  assertUrl("RESEND_BASE_URL", env.resendBaseUrl);
   if (env.authorityAdapter === "webhook") assertUrl("AUTHORITY_WEBHOOK_URL", env.authorityWebhookUrl);
   if (env.authorityAdapter === "email" && !/@/.test(env.authorityTicketEmail)) {
     throw new Error("AUTHORITY_TICKET_EMAIL must be configured when AUTHORITY_ADAPTER=email.");
@@ -85,8 +96,11 @@ function validateConfiguration(env = config) {
     if (!env.mongoUri) throw new Error("MONGODB_URI must be configured in production.");
     if (!process.env.AI_SERVICE_URL) throw new Error("AI_SERVICE_URL must be configured in production.");
     if (env.aiServiceToken.length < 32) throw new Error("AI_SERVICE_TOKEN must contain at least 32 characters in production.");
-    if (![env.smtpHost, env.smtpUser, env.smtpPass, env.smtpFrom].every(Boolean)) {
-      throw new Error("SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM must be configured in production for OTP delivery.");
+    if (env.emailProvider === "smtp" && ![env.smtpHost, env.smtpUser, env.smtpPass, env.smtpFrom].every(Boolean)) {
+      throw new Error("SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM must be configured when EMAIL_PROVIDER=smtp in production.");
+    }
+    if (env.emailProvider === "resend" && ![env.resendApiKey, env.smtpFrom].every(Boolean)) {
+      throw new Error("RESEND_API_KEY and SMTP_FROM must be configured when EMAIL_PROVIDER=resend in production.");
     }
     if (env.allowRoleTokenIssue) throw new Error("ALLOW_ROLE_TOKEN_ISSUE must remain false in production.");
   }

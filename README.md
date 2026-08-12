@@ -307,10 +307,15 @@ Start from [.env.example](.env.example). Keep every credential server-side and u
 
 | Variable | Purpose |
 | --- | --- |
-| <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code> | SMTP transport |
-| <code>SMTP_USER</code>, <code>SMTP_PASS</code>, <code>SMTP_FROM</code> | OTP sender credentials |
+| <code>EMAIL_PROVIDER=smtp</code> or <code>resend</code> | Selects SMTP or Resend HTTPS delivery |
+| <code>SMTP_FROM</code> | Sender address used by both providers |
+| <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code> | SMTP transport settings when <code>EMAIL_PROVIDER=smtp</code> |
+| <code>SMTP_USER</code>, <code>SMTP_PASS</code> | SMTP credentials when <code>EMAIL_PROVIDER=smtp</code> |
 | <code>SMTP_FAMILY=4</code> | Prefer IPv4 where the host cannot reach Gmail IPv6 |
+| <code>RESEND_API_KEY</code>, <code>RESEND_BASE_URL=https://api.resend.com</code> | Resend HTTPS delivery when <code>EMAIL_PROVIDER=resend</code> |
 | <code>ALLOW_ROLE_TOKEN_ISSUE=false</code> | Disable development token issuance in production |
+
+Render Free blocks outbound SMTP ports, so the recommended free deployment setting is <code>EMAIL_PROVIDER=resend</code>. Without a verified Resend domain, <code>onboarding@resend.dev</code> is suitable for testing but can send only to the email address associated with the Resend account. A verified domain is required for arbitrary recipient emails.
 
 ### Vision Service
 
@@ -532,7 +537,7 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 
 ## Operational Notes
 
-- **OTP not received:** verify SMTP credentials, Gmail app password, sender identity, and <code>SMTP_FAMILY=4</code>; failed delivery never reports success.
+- **OTP not received:** if <code>EMAIL_PROVIDER=resend</code>, verify <code>RESEND_API_KEY</code>, <code>SMTP_FROM</code>, and Resend sender/recipient restrictions. If <code>EMAIL_PROVIDER=smtp</code>, verify SMTP credentials, Gmail app password, sender identity, and <code>SMTP_FAMILY=4</code>. Render Free web services cannot send outbound SMTP traffic on ports <code>25</code>, <code>465</code>, or <code>587</code>. Failed delivery never reports success.
 - **Image analysis unavailable:** check the Flask service, AWS EC2 <code>/ready</code>, security-group port, container logs, and shared token equality. Re-submit Image retries the retained photo.
 - **Weather unavailable:** confirm the location resolves inside Bengaluru, inspect the admin usage panel, and verify Weatherstack configuration. Cached observations and complaint submission remain available independently.
 - **Civic references unavailable:** inspect the admin usage panel and Zenserp configuration. Routing and complaint creation continue without search context.

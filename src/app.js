@@ -6,6 +6,7 @@ const env = require("./config/env");
 const apiRoutes = require("./routes/api");
 const { setSecurityHeaders, setNoStoreHeaders, createRateLimiter } = require("./middleware/security");
 const { refreshAiServiceConnectionStatus } = require("./services/aiClient");
+const { getEmailHealthSnapshot } = require("./services/emailService");
 
 const app = express();
 const allowedOrigins = new Set([`http://localhost:${env.port}`, `http://127.0.0.1:${env.port}`, ...env.corsOrigins]);
@@ -52,6 +53,7 @@ app.get("/health", async (_req, res) => {
     status: databaseReady ? "ok" : "degraded",
     service: "urban-pulse-web",
     database: databaseReady ? "connected" : "disconnected",
+    email: getEmailHealthSnapshot(),
     aiService
   });
 });
@@ -62,7 +64,12 @@ app.get("/health/live", (_req, res) => {
 
 app.get("/health/ready", (_req, res) => {
   const databaseReady = mongoose.connection.readyState === 1;
-  res.status(databaseReady ? 200 : 503).json({ status: databaseReady ? "ready" : "not_ready", service: "urban-pulse-web", database: databaseReady ? "connected" : "disconnected" });
+  res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? "ready" : "not_ready",
+    service: "urban-pulse-web",
+    database: databaseReady ? "connected" : "disconnected",
+    email: getEmailHealthSnapshot()
+  });
 });
 
 app.get("*", (_req, res) => {

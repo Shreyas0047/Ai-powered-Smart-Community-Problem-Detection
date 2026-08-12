@@ -1,4 +1,4 @@
-const { sendRegistrationOtpEmail, verifySmtpConnection } = require("../src/services/emailService");
+const { getEmailHealthSnapshot, sendRegistrationOtpEmail, verifySmtpConnection } = require("../src/services/emailService");
 
 verifySmtpConnection()
   .then(async (result) => {
@@ -23,6 +23,8 @@ verifySmtpConnection()
       JSON.stringify(
         {
           ok: result.ok,
+          activeProvider: getEmailHealthSnapshot().provider,
+          emailConfigured: getEmailHealthSnapshot().configured,
           host: result.host,
           port: result.port,
           secure: result.secure,

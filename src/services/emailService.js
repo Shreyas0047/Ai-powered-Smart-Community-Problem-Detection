@@ -9,7 +9,27 @@ if (typeof dns.setDefaultResultOrder === "function") {
 }
 
 function isEmailConfigured() {
+  if (env.emailProvider === "resend") {
+    return Boolean(env.resendApiKey && env.smtpFrom);
+  }
   return Boolean(env.smtpHost && env.smtpPort && env.smtpUser && env.smtpPass && env.smtpFrom);
+}
+
+function getEmailProvider() {
+  return env.emailProvider === "resend" ? "resend" : "smtp";
+}
+
+function getEmailHealthSnapshot() {
+  const provider = getEmailProvider();
+  return {
+    provider,
+    configured: isEmailConfigured(),
+    fromConfigured: Boolean(env.smtpFrom),
+    resendConfigured: Boolean(env.resendApiKey && env.smtpFrom),
+    smtpConfigured: Boolean(env.smtpHost && env.smtpPort && env.smtpUser && env.smtpPass && env.smtpFrom),
+    smtpPort: provider === "smtp" ? env.smtpPort : undefined,
+    smtpFamily: provider === "smtp" ? env.smtpFamily : undefined
+  };
 }
 
 function createEmailDeliveryError(message, options = {}) {
@@ -84,7 +104,8 @@ function maskEmail(email) {
 function logEmailDelivery({ purpose, recipients, info }) {
   console.log(
     JSON.stringify({
-      event: "smtp_email_delivery",
+      event: "email_delivery",
+      provider: info.provider || getEmailProvider(),
       purpose,
       accepted: (info.accepted || []).map(maskEmail),
       rejected: (info.rejected || []).map(maskEmail),
@@ -97,7 +118,8 @@ function logEmailDelivery({ purpose, recipients, info }) {
 function logEmailFailure({ purpose, recipients, error }) {
   console.error(
     JSON.stringify({
-      event: "smtp_email_failure",
+      event: "email_failure",
+      provider: getEmailProvider(),
       purpose,
       recipients: (recipients || []).map(maskEmail),
       code: error.code || "SMTP_ERROR",
@@ -105,6 +127,29 @@ function logEmailFailure({ purpose, recipients, error }) {
       message: error.message || "SMTP request failed."
     })
   );
+}
+
+function normalizeResendError(error) {
+  if (error?.isEmailDeliveryError) {
+    return error;
+  }
+
+  const statusCode = Number(error?.statusCode || error?.status || 502);
+  const code = String(error?.code || "RESEND_DELIVERY_FAILED");
+  const message = String(error?.message || "Resend email request failed.");
+  const retryable = statusCode === 429 || statusCode >= 500;
+  const authFailure = statusCode === 401 || statusCode === 403;
+
+  return createEmailDeliveryError(`${code}: ${message}`, {
+    code: authFailure ? "RESEND_AUTH_FAILED" : code,
+    statusCode,
+    retryable: authFailure ? false : retryable,
+    userMessage: authFailure
+      ? "Email service authentication failed. The OTP was not sent. Contact the administrator."
+      : retryable
+        ? "Email service is temporarily unavailable. The OTP was not sent. Please try again shortly."
+        : "Email provider rejected the email request. The OTP was not sent. Contact the administrator."
+  });
 }
 
 function normalizeEmailError(error) {
@@ -116,6 +161,7 @@ function normalizeEmailError(error) {
   const message = error?.response || error?.message || "SMTP request failed.";
   const details = `${code}: ${message}`;
   const normalizedMessage = String(message).toLowerCase();
+  const usesCommonSmtpPort = [25, 465, 587].includes(Number(env.smtpPort));
 
   if (normalizedMessage.includes("invalid login") || error?.responseCode === 535) {
     return createEmailDeliveryError(`${details} Check SMTP_USER and SMTP_PASS. Gmail requires an App Password, not the normal account password.`, {
@@ -133,10 +179,20 @@ function normalizeEmailError(error) {
     });
   }
 
-  if (error?.code === "ENETUNREACH" && String(message).includes(":587")) {
-    return createEmailDeliveryError(`${details} SMTP resolved to an unreachable network address. Set SMTP_FAMILY=4 to force IPv4.`, {
-      code: "SMTP_NETWORK_UNREACHABLE",
-      userMessage: "Email service cannot reach Gmail SMTP from this server. The email was not sent. Contact the administrator."
+  if (
+    usesCommonSmtpPort &&
+    (
+      error?.code === "ENETUNREACH" ||
+      normalizedMessage.includes("enetunreach") ||
+      normalizedMessage.includes("network is unreachable") ||
+      normalizedMessage.includes("smtp ports") ||
+      normalizedMessage.includes("outbound smtp")
+    )
+  ) {
+    return createEmailDeliveryError(`${details} The hosting environment cannot reach outbound SMTP port ${env.smtpPort}.`, {
+      code: "SMTP_PORT_BLOCKED",
+      retryable: false,
+      userMessage: `Email service cannot reach SMTP port ${env.smtpPort} from this hosting environment. The OTP was not sent. Use a paid host that allows SMTP or switch to an HTTPS email API.`
     });
   }
 
@@ -148,9 +204,13 @@ function normalizeEmailError(error) {
   }
 
   if (error?.code === "ETIMEDOUT" || error?.code === "ESOCKET") {
+    const maybeBlockedPort = usesCommonSmtpPort && /\b(?:25|465|587)\b/.test(String(message));
     return createEmailDeliveryError(`${details} SMTP connection timed out or the socket failed.`, {
-      code: "SMTP_CONNECTION_FAILED",
-      userMessage: "Email service could not connect to Gmail SMTP. The email was not sent. Try again shortly."
+      code: maybeBlockedPort ? "SMTP_PORT_BLOCKED" : "SMTP_CONNECTION_FAILED",
+      retryable: !maybeBlockedPort,
+      userMessage: maybeBlockedPort
+        ? `Email service cannot reach SMTP port ${env.smtpPort} from this hosting environment. The OTP was not sent. Use a paid host that allows SMTP or switch to an HTTPS email API.`
+        : "Email service could not connect to Gmail SMTP. The email was not sent. Try again shortly."
     });
   }
 
@@ -169,6 +229,23 @@ function normalizeEmailError(error) {
 
 async function verifySmtpConnection() {
   try {
+    if (env.emailProvider === "resend") {
+      if (!isEmailConfigured()) {
+        throw createEmailDeliveryError("Resend is not configured. Set RESEND_API_KEY and SMTP_FROM.", {
+          code: "RESEND_NOT_CONFIGURED",
+          statusCode: 503,
+          retryable: false,
+          userMessage: "Email service is not configured. The email was not sent. Contact the administrator."
+        });
+      }
+      return {
+        ok: true,
+        provider: "resend",
+        baseUrl: env.resendBaseUrl,
+        from: getFromAddress()
+      };
+    }
+
     const transporter = createTransporter();
     await transporter.verify();
     return {
@@ -180,14 +257,85 @@ async function verifySmtpConnection() {
       from: getFromAddress()
     };
   } catch (error) {
-    throw normalizeEmailError(error);
+    throw env.emailProvider === "resend" ? normalizeResendError(error) : normalizeEmailError(error);
+  }
+}
+
+async function sendResendMail(options, recipients) {
+  if (!isEmailConfigured()) {
+    throw createEmailDeliveryError("Resend is not configured. Set RESEND_API_KEY and SMTP_FROM.", {
+      code: "RESEND_NOT_CONFIGURED",
+      statusCode: 503,
+      retryable: false,
+      userMessage: "Email service is not configured. The email was not sent. Contact the administrator."
+    });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(`${env.resendBaseUrl.replace(/\/+$/, "")}/emails`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.resendApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: options.from || getFromAddress(),
+        to: recipients,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+        attachments: Array.isArray(options.attachments)
+          ? options.attachments.map((attachment) => ({
+              filename: attachment.filename,
+              content: attachment.content
+            }))
+          : undefined
+      }),
+      signal: controller.signal
+    });
+
+    const responseText = await response.text();
+    let data = {};
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (_error) {
+      data = {};
+    }
+
+    if (!response.ok || data?.error) {
+      const providerError = data?.error || data;
+      const error = new Error(providerError?.message || providerError?.name || `Resend returned HTTP ${response.status}.`);
+      error.statusCode = response.status;
+      error.code = providerError?.name || providerError?.code || "RESEND_DELIVERY_FAILED";
+      throw error;
+    }
+
+    return {
+      provider: "resend",
+      messageId: data.id || "",
+      accepted: recipients,
+      rejected: [],
+      pending: []
+    };
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Resend request timed out.");
+      timeoutError.statusCode = 504;
+      timeoutError.code = "RESEND_TIMEOUT";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
 async function sendMail(options) {
   const recipients = normalizeRecipients(options.to);
   try {
-    const transporter = createTransporter();
     if (!recipients.length) {
       throw createEmailDeliveryError("At least one recipient email is required.", {
         code: "SMTP_RECIPIENT_REQUIRED",
@@ -197,14 +345,16 @@ async function sendMail(options) {
       });
     }
 
-    const info = await transporter.sendMail({
-      ...options,
-      from: options.from || getFromAddress(),
-      envelope: {
-        from: env.smtpUser,
-        to: recipients
-      }
-    });
+    const info = env.emailProvider === "resend"
+      ? await sendResendMail(options, recipients)
+      : await createTransporter().sendMail({
+          ...options,
+          from: options.from || getFromAddress(),
+          envelope: {
+            from: env.smtpUser,
+            to: recipients
+          }
+        });
 
     if (recipients.length && !info.accepted?.length) {
       const rejected = (info.rejected || []).join(", ") || "all recipients";
@@ -222,7 +372,9 @@ async function sendMail(options) {
 
     return info;
   } catch (error) {
-    const normalizedError = normalizeEmailError(error);
+    const normalizedError = env.emailProvider === "resend"
+      ? normalizeResendError(error)
+      : normalizeEmailError(error);
     logEmailFailure({
       purpose: options.purpose || "general",
       recipients,
@@ -509,6 +661,7 @@ async function sendEmergencyBroadcastEmail({ emails, complaint, routing, message
 }
 
 module.exports = {
+  getEmailHealthSnapshot,
   isEmailConfigured,
   sendBbmpComplaintEmail,
   sendAuthorityTicketEmail,

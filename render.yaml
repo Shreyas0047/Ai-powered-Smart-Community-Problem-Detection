@@ -136,6 +136,12 @@ services:
         value: "48"
       - key: ZENSERP_PUBLIC_CACHE_HOURS
         value: "6"
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_BASE_URL
+        value: https://api.resend.com
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

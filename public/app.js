@@ -1354,8 +1354,8 @@ function formatOtpDeliveryDetail(data, fallbackEmail) {
 }
 
 function formatOtpErrorDetail(error) {
-  const code = error?.code || "SMTP_ERROR";
-  const retryNote = error?.retryable === false ? "Admin SMTP settings need attention." : "Try again in a minute.";
+  const code = error?.code || "EMAIL_DELIVERY_FAILED";
+  const retryNote = error?.retryable === false ? "Admin email settings need attention." : "Try again in a minute.";
   return `${code} · ${retryNote}`;
 }
 
@@ -1397,7 +1397,7 @@ async function requestRegistrationOtp() {
     }
     const message =
       error.deliveryStatus === "not_sent"
-        ? "OTP could not be sent. Please try again."
+        ? error.message || "OTP could not be sent. Please try again."
         : error.message;
     clearOtpTimer();
     setOtpTimerMessage(formatOtpErrorDetail(error), "expired");
@@ -1451,7 +1451,7 @@ async function requestPasswordResetOtp() {
     }
     const message =
       error.deliveryStatus === "not_sent"
-        ? "OTP could not be sent. Please try again."
+        ? error.message || "OTP could not be sent. Please try again."
         : error.message;
     clearOtpTimer();
     setOtpTimerMessage(formatOtpErrorDetail(error), "expired");
