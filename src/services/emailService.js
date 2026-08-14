@@ -25,6 +25,7 @@ function getEmailHealthSnapshot() {
     provider,
     configured: isEmailConfigured(),
     fromConfigured: Boolean(env.smtpFrom),
+    envelopeFromConfigured: Boolean(getEnvelopeFromAddress()),
     resendConfigured: Boolean(env.resendApiKey && env.smtpFrom),
     smtpConfigured: Boolean(env.smtpHost && env.smtpPort && env.smtpUser && env.smtpPass && env.smtpFrom),
     smtpPort: provider === "smtp" ? env.smtpPort : undefined,
@@ -78,12 +79,31 @@ function createTransporter() {
   return cachedTransporter;
 }
 
+function normalizeConfiguredFrom(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^["'](.+)["']$/, "$1")
+    .trim();
+}
+
 function getFromAddress() {
-  const from = String(env.smtpFrom || env.smtpUser || "").trim();
+  const from = normalizeConfiguredFrom(env.smtpFrom || env.smtpUser);
   if (!from) {
     return "";
   }
   return from.includes("<") ? from : `"Urban Pulse AI" <${from}>`;
+}
+
+function getEnvelopeFromAddress() {
+  const from = normalizeConfiguredFrom(env.smtpFrom);
+  const bracketMatch = from.match(/<([^<>@\s]+@[^<>\s]+)>/);
+  if (bracketMatch) {
+    return bracketMatch[1].trim();
+  }
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) {
+    return from;
+  }
+  return String(env.smtpUser || "").trim();
 }
 
 function normalizeRecipients(value) {
@@ -351,7 +371,7 @@ async function sendMail(options) {
           ...options,
           from: options.from || getFromAddress(),
           envelope: {
-            from: env.smtpUser,
+            from: getEnvelopeFromAddress(),
             to: recipients
           }
         });
