@@ -183,12 +183,12 @@ function normalizeEmailError(error) {
   const normalizedMessage = String(message).toLowerCase();
   const usesCommonSmtpPort = [25, 465, 587].includes(Number(env.smtpPort));
 
-  if (normalizedMessage.includes("invalid login") || error?.responseCode === 535) {
-    return createEmailDeliveryError(`${details} Check SMTP_USER and SMTP_PASS. Gmail requires an App Password, not the normal account password.`, {
+  if (error?.code === "EAUTH" || normalizedMessage.includes("invalid login") || error?.responseCode === 535) {
+    return createEmailDeliveryError(`${details} Check SMTP_USER and SMTP_PASS. Use the provider SMTP login and SMTP key, not the account password or API key.`, {
       code: "SMTP_AUTH_FAILED",
       statusCode: 502,
       retryable: false,
-      userMessage: "Email service authentication failed. The email was not sent. Contact the administrator."
+      userMessage: "Email service authentication failed. The OTP was not sent. Check the SMTP login and SMTP key."
     });
   }
 
