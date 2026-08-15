@@ -315,7 +315,7 @@ Start from [.env.example](.env.example). Keep every credential server-side and u
 | <code>RESEND_API_KEY</code>, <code>RESEND_BASE_URL=https://api.resend.com</code> | Resend HTTPS delivery when <code>EMAIL_PROVIDER=resend</code> |
 | <code>ALLOW_ROLE_TOKEN_ISSUE=false</code> | Disable development token issuance in production |
 
-Render Free blocks outbound SMTP ports, so the recommended free deployment setting is <code>EMAIL_PROVIDER=resend</code>. Without a verified Resend domain, <code>onboarding@resend.dev</code> is suitable for testing but can send only to the email address associated with the Resend account. A verified domain is required for arbitrary recipient emails.
+Render Free blocks common SMTP ports, so the recommended free deployment setting is <code>EMAIL_PROVIDER=smtp</code> with a transactional provider such as Brevo on port <code>2525</code>. Resend remains supported through HTTPS, but its no-domain testing sender is limited to the Resend account email.
 
 ### Vision Service
 
@@ -537,7 +537,7 @@ All complaint, dashboard, user, verification, and authority routes require JWT a
 
 ## Operational Notes
 
-- **OTP not received:** if <code>EMAIL_PROVIDER=resend</code>, verify <code>RESEND_API_KEY</code>, <code>SMTP_FROM</code>, and Resend sender/recipient restrictions. If <code>EMAIL_PROVIDER=smtp</code>, verify SMTP credentials, Gmail app password, sender identity, and <code>SMTP_FAMILY=4</code>. Render Free web services cannot send outbound SMTP traffic on ports <code>25</code>, <code>465</code>, or <code>587</code>. Failed delivery never reports success.
+- **OTP not received:** if <code>EMAIL_PROVIDER=smtp</code>, verify SMTP host, port, login, SMTP key, sender identity, and <code>SMTP_FAMILY=4</code>. On Render Free, use a provider/port combination such as Brevo <code>smtp-relay.brevo.com:2525</code>; ports <code>25</code>, <code>465</code>, and <code>587</code> are blocked. If <code>EMAIL_PROVIDER=resend</code>, verify <code>RESEND_API_KEY</code>, <code>SMTP_FROM</code>, and Resend sender/recipient restrictions. Failed delivery never reports success.
 - **Image analysis unavailable:** check the Flask service, AWS EC2 <code>/ready</code>, security-group port, container logs, and shared token equality. Re-submit Image retries the retained photo.
 - **Weather unavailable:** confirm the location resolves inside Bengaluru, inspect the admin usage panel, and verify Weatherstack configuration. Cached observations and complaint submission remain available independently.
 - **Civic references unavailable:** inspect the admin usage panel and Zenserp configuration. Routing and complaint creation continue without search context.
