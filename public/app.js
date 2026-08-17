@@ -155,6 +155,7 @@ let currentImageAiPayload = null;
 let imageAnalysisRequestId = 0;
 let weatherPreviewRequestId = 0;
 let currentReportMapLocation = null;
+let currentReportLocationAccuracy = null;
 let lastWeatherPreviewLocation = "";
 let activeWeatherPreviewLocation = "";
 let currentImageAnalysisToken = "";
@@ -1591,6 +1592,13 @@ function finishEmailProgress(success = true) {
   finishReportProgress(success, success ? "Complaint email sent successfully." : "Complaint email could not be sent.");
 }
 
+function formatLiveLocationAccuracy(accuracy) {
+  const meters = Number(accuracy);
+  if (!Number.isFinite(meters) || meters <= 0) return "";
+  if (meters >= 1000) return `GPS accuracy ±${(meters / 1000).toFixed(1)} km`;
+  return `GPS accuracy ±${Math.round(meters)} m`;
+}
+
 function updateLiveLocationMap(location, mapQuery = location) {
   const trimmedLocation = (location || "").trim();
   const trimmedMapQuery = (mapQuery || "").trim();
@@ -1604,7 +1612,10 @@ function updateLiveLocationMap(location, mapQuery = location) {
 
   locationMapFrame.hidden = false;
   locationMapFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(trimmedMapQuery)}&output=embed`;
-  liveLocationStatus.textContent = `Showing map preview for ${trimmedLocation}.`;
+  const accuracyText = currentReportMapLocation ? formatLiveLocationAccuracy(currentReportLocationAccuracy) : "";
+  liveLocationStatus.textContent = accuracyText
+    ? `Showing map preview for ${trimmedLocation}. ${accuracyText}.`
+    : `Showing map preview for ${trimmedLocation}.`;
 }
 
 function formatReverseGeocodedLocation(data, latitude, longitude) {
@@ -1890,36 +1901,103 @@ function useLiveLocation() {
     return;
   }
 
-  useLiveLocationBtn.disabled = true;
-  setDashboardMessage("Fetching live location...", "info");
+  const originalButtonText = useLiveLocationBtn.textContent;
+  let bestPosition = null;
+  let watchId = null;
+  let settled = false;
+  const captureMs = 8500;
+  const goodAccuracyMeters = 45;
 
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const latitude = position.coords.latitude;
-      const longitude = position.coords.longitude;
-      let readableLocation = "";
+  function isBetterPosition(next, previous) {
+    if (!previous) return true;
+    const nextAccuracy = Number(next?.coords?.accuracy);
+    const previousAccuracy = Number(previous?.coords?.accuracy);
+    if (!Number.isFinite(nextAccuracy)) return false;
+    if (!Number.isFinite(previousAccuracy)) return true;
+    return nextAccuracy < previousAccuracy;
+  }
 
-      try {
-        readableLocation = await reverseGeocodeLiveLocation(latitude, longitude);
-      } catch (error) {
-        readableLocation = "Current location";
-      }
+  async function applyLivePosition(position, reason = "captured") {
+    if (settled) return;
+    settled = true;
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
 
-      reportLocationInput.value = readableLocation;
-      currentReportMapLocation = {
-        lat: Number(latitude.toFixed(6)),
-        lng: Number(longitude.toFixed(6))
-      };
-      resetWeatherPreview("Location changed. Press Check Weather to retrieve current conditions.");
-      resetCivicContext({
-        imageReady: Boolean(currentImageAnalysisToken),
-        message: "Location changed. Check civic context again for this location."
-      });
-      updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-      setDashboardMessage("Live location added to the report form.", "success");
+    const latitude = Number(position?.coords?.latitude);
+    const longitude = Number(position?.coords?.longitude);
+    const accuracy = Number(position?.coords?.accuracy);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      setDashboardMessage("Live location returned invalid coordinates. Try again.", "error");
       useLiveLocationBtn.disabled = false;
+      useLiveLocationBtn.textContent = originalButtonText;
+      return;
+    }
+
+    let readableLocation = "";
+    try {
+      readableLocation = await reverseGeocodeLiveLocation(latitude, longitude);
+    } catch (error) {
+      readableLocation = `Current location near ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    }
+
+    reportLocationInput.value = readableLocation;
+    currentReportMapLocation = {
+      lat: Number(latitude.toFixed(6)),
+      lng: Number(longitude.toFixed(6))
+    };
+    currentReportLocationAccuracy = Number.isFinite(accuracy) ? accuracy : null;
+    resetWeatherPreview("Location changed. Press Check Weather to retrieve current conditions.");
+    resetCivicContext({
+      imageReady: Boolean(currentImageAnalysisToken),
+      message: "Location changed. Check civic context again for this location."
+    });
+    updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+
+    const accuracyText = formatLiveLocationAccuracy(accuracy);
+    const accuracyWarning = Number.isFinite(accuracy) && accuracy > 150
+      ? " Accuracy is broad; move outdoors or enable precise location if needed."
+      : "";
+    setDashboardMessage(
+      `Live location added${accuracyText ? ` (${accuracyText})` : ""}.${reason === "best_available" ? " Best available reading used." : ""}${accuracyWarning}`,
+      Number.isFinite(accuracy) && accuracy > 300 ? "info" : "success"
+    );
+    useLiveLocationBtn.disabled = false;
+    useLiveLocationBtn.textContent = originalButtonText;
+  }
+
+  useLiveLocationBtn.disabled = true;
+  useLiveLocationBtn.textContent = "Locating...";
+  setDashboardMessage("Fetching precise live location. Keep location permission enabled for a few seconds...", "info");
+
+  const options = {
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 0
+  };
+
+  watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      if (settled) return;
+      if (isBetterPosition(position, bestPosition)) {
+        bestPosition = position;
+      }
+      const accuracy = Number(bestPosition?.coords?.accuracy);
+      const accuracyText = formatLiveLocationAccuracy(accuracy);
+      setDashboardMessage(
+        accuracyText
+          ? `Improving live location... best reading ${accuracyText}.`
+          : "Improving live location...",
+        "info"
+      );
+      if (Number.isFinite(accuracy) && accuracy <= goodAccuracyMeters) {
+        applyLivePosition(bestPosition, "high_accuracy");
+      }
     },
     (error) => {
+      if (settled) return;
+      if (bestPosition) {
+        applyLivePosition(bestPosition, "best_available");
+        return;
+      }
       const message =
         error.code === error.PERMISSION_DENIED
           ? "Location permission was denied. Allow location access and try again."
@@ -1929,15 +2007,27 @@ function useLiveLocation() {
               ? "Live location request timed out. Try again."
               : "Unable to fetch live location.";
 
+      settled = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       setDashboardMessage(message, "error");
       useLiveLocationBtn.disabled = false;
+      useLiveLocationBtn.textContent = originalButtonText;
     },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000
-    }
+    options
   );
+
+  window.setTimeout(() => {
+    if (settled) return;
+    if (bestPosition) {
+      applyLivePosition(bestPosition, "best_available");
+      return;
+    }
+    settled = true;
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    setDashboardMessage("Live location could not get a GPS fix. Move outdoors or enable precise location and try again.", "error");
+    useLiveLocationBtn.disabled = false;
+    useLiveLocationBtn.textContent = originalButtonText;
+  }, captureMs);
 }
 
 function createClientRequestId() {
@@ -5027,6 +5117,7 @@ function resetComposer({ clearDraft = true } = {}) {
   currentImageAiPayload = null;
   currentImageAnalysisToken = "";
   currentReportMapLocation = null;
+  currentReportLocationAccuracy = null;
   resetWeatherPreview();
   resetCivicContext();
   clearEmailProgressTimer();
@@ -5563,6 +5654,7 @@ emailBbmpBtn.addEventListener("click", async () => {
 });
 reportLocationInput.addEventListener("input", (event) => {
   currentReportMapLocation = null;
+  currentReportLocationAccuracy = null;
   updateLiveLocationMap(event.target.value);
   if (weatherPreviewPanel.dataset.state !== "idle") {
     resetWeatherPreview("Location changed. Press Check Weather to retrieve the new conditions.");
