@@ -5547,7 +5547,13 @@ emailBbmpBtn.addEventListener("click", async () => {
     });
 
     finishEmailProgress(true);
-    setDashboardMessage(response.message || "Complaint email sent to the configured authority successfully.", "success");
+    const delivery = response.delivery || {};
+    const reference = delivery.messageId || response.messageId;
+    const referenceText = reference ? ` Reference: ${reference}.` : "";
+    const deliveryText = delivery.provider
+      ? `${response.message || "Authority email accepted by the configured mail provider."}${referenceText}`
+      : response.message || "Authority email accepted by the configured mail provider.";
+    setDashboardMessage(deliveryText, "success");
   } catch (error) {
     finishEmailProgress(false);
     setDashboardMessage(error.message, "error");

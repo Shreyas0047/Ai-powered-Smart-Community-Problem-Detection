@@ -21,6 +21,13 @@ function normalizeText(value, maxLength) {
   return normalized.slice(0, maxLength);
 }
 
+function maskEmail(email) {
+  const value = String(email || "").trim();
+  const [name, domain] = value.split("@");
+  if (!name || !domain) return value ? "***" : "";
+  return `${name.slice(0, 2)}***@${domain}`;
+}
+
 function sanitizeFilename(filename) {
   const cleaned = String(filename || "complaint-report.pdf")
     .replace(/[^A-Za-z0-9._-]/g, "-")
@@ -160,8 +167,16 @@ async function emailAuthorityComplaint(req, res, next) {
 
     res.json({
       sent: true,
-      message: "Complaint email sent to the configured authority channel.",
-      messageId: emailResult.messageId
+      message: `Authority email accepted by the configured mail provider for ${maskEmail(destination)}.`,
+      messageId: emailResult.messageId,
+      delivery: {
+        provider: emailResult.provider || env.emailProvider,
+        destination: maskEmail(destination),
+        acceptedCount: Array.isArray(emailResult.accepted) ? emailResult.accepted.length : 0,
+        rejectedCount: Array.isArray(emailResult.rejected) ? emailResult.rejected.length : 0,
+        pendingCount: Array.isArray(emailResult.pending) ? emailResult.pending.length : 0,
+        messageId: emailResult.messageId || ""
+      }
     });
   } catch (error) {
     next(error);

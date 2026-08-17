@@ -112,6 +112,20 @@ function normalizeRecipients(value) {
     .filter(Boolean);
 }
 
+function normalizeEmailAddress(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function acceptedRecipientCount(info, recipients) {
+  const accepted = new Set((info.accepted || []).map(normalizeEmailAddress));
+  return recipients.filter((email) => accepted.has(normalizeEmailAddress(email))).length;
+}
+
+function rejectedPrimaryRecipients(info, recipients) {
+  const rejected = new Set((info.rejected || []).map(normalizeEmailAddress));
+  return recipients.filter((email) => rejected.has(normalizeEmailAddress(email)));
+}
+
 function maskEmail(email) {
   const value = String(email || "").trim();
   const [name, domain] = value.split("@");
@@ -376,8 +390,18 @@ async function sendMail(options) {
           }
         });
 
-    if (recipients.length && !info.accepted?.length) {
-      const rejected = (info.rejected || []).join(", ") || "all recipients";
+    const normalizedInfo = {
+      ...info,
+      provider: info.provider || getEmailProvider(),
+      accepted: info.accepted || [],
+      rejected: info.rejected || [],
+      pending: info.pending || []
+    };
+    const rejectedRecipients = rejectedPrimaryRecipients(normalizedInfo, recipients);
+    const acceptedPrimaryCount = acceptedRecipientCount(normalizedInfo, recipients);
+
+    if (rejectedRecipients.length || !acceptedPrimaryCount) {
+      const rejected = rejectedRecipients.join(", ") || (normalizedInfo.rejected || []).join(", ") || "the intended recipient";
       throw createEmailDeliveryError(`SMTP provider rejected ${rejected}.`, {
         code: "SMTP_RECIPIENT_REJECTED",
         userMessage: "Email provider rejected the recipient address. The email was not sent."
@@ -387,10 +411,10 @@ async function sendMail(options) {
     logEmailDelivery({
       purpose: options.purpose || "general",
       recipients,
-      info
+      info: normalizedInfo
     });
 
-    return info;
+    return normalizedInfo;
   } catch (error) {
     const normalizedError = env.emailProvider === "resend"
       ? normalizeResendError(error)
@@ -549,7 +573,11 @@ async function sendBbmpComplaintEmail({ to = env.bbmpEmailTo, subject, report, p
   });
 
   return {
-    messageId: info.messageId
+    provider: info.provider || getEmailProvider(),
+    messageId: info.messageId,
+    accepted: info.accepted || [],
+    rejected: info.rejected || [],
+    pending: info.pending || []
   };
 }
 
@@ -579,7 +607,13 @@ async function sendAuthorityTicketEmail({ to, ticket, payload }) {
       "Reply with the external ticket reference so an administrator can reconcile this record."
     ].join("\n")
   });
-  return { messageId: info.messageId };
+  return {
+    provider: info.provider || getEmailProvider(),
+    messageId: info.messageId,
+    accepted: info.accepted || [],
+    rejected: info.rejected || [],
+    pending: info.pending || []
+  };
 }
 
 function getSeverityWarning(severity) {
