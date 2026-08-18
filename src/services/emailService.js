@@ -295,7 +295,7 @@ async function verifySmtpConnection() {
   }
 }
 
-async function sendResendMail(options, recipients) {
+async function sendResendMail(options, recipients, bccRecipients = []) {
   if (!isEmailConfigured()) {
     throw createEmailDeliveryError("Resend is not configured. Set RESEND_API_KEY and SMTP_FROM.", {
       code: "RESEND_NOT_CONFIGURED",
@@ -318,6 +318,7 @@ async function sendResendMail(options, recipients) {
       body: JSON.stringify({
         from: options.from || getFromAddress(),
         to: recipients,
+        bcc: bccRecipients.length ? bccRecipients : undefined,
         subject: options.subject,
         html: options.html,
         text: options.text,
@@ -350,7 +351,7 @@ async function sendResendMail(options, recipients) {
     return {
       provider: "resend",
       messageId: data.id || "",
-      accepted: recipients,
+      accepted: [...recipients, ...bccRecipients],
       rejected: [],
       pending: []
     };
@@ -369,6 +370,8 @@ async function sendResendMail(options, recipients) {
 
 async function sendMail(options) {
   const recipients = normalizeRecipients(options.to);
+  const bccRecipients = normalizeRecipients(options.bcc);
+  const envelopeRecipients = [...new Set([...recipients, ...bccRecipients])];
   try {
     if (!recipients.length) {
       throw createEmailDeliveryError("At least one recipient email is required.", {
@@ -380,13 +383,13 @@ async function sendMail(options) {
     }
 
     const info = env.emailProvider === "resend"
-      ? await sendResendMail(options, recipients)
+      ? await sendResendMail(options, recipients, bccRecipients)
       : await createTransporter().sendMail({
           ...options,
           from: options.from || getFromAddress(),
           envelope: {
             from: getEnvelopeFromAddress(),
-            to: recipients
+            to: envelopeRecipients
           }
         });
 
@@ -410,7 +413,7 @@ async function sendMail(options) {
 
     logEmailDelivery({
       purpose: options.purpose || "general",
-      recipients,
+      recipients: envelopeRecipients,
       info: normalizedInfo
     });
 
@@ -421,7 +424,7 @@ async function sendMail(options) {
       : normalizeEmailError(error);
     logEmailFailure({
       purpose: options.purpose || "general",
-      recipients,
+      recipients: envelopeRecipients.length ? envelopeRecipients : recipients,
       error: normalizedError
     });
     throw normalizedError;
@@ -560,6 +563,7 @@ async function sendBbmpComplaintEmail({ to = env.bbmpEmailTo, subject, report, p
   const info = await sendMail({
     purpose: "authority_complaint",
     to,
+    bcc: env.authorityEmailBcc,
     subject: mailSubject,
     text: bodyLines.join("\n"),
     attachments: [
@@ -585,6 +589,7 @@ async function sendAuthorityTicketEmail({ to, ticket, payload }) {
   const info = await sendMail({
     purpose: "authority_ticket",
     to,
+    bcc: env.authorityEmailBcc,
     subject: `[${payload.severity}] Civic ticket ${ticket.ticketCode}: ${payload.issueType}`,
     text: [
       "A tracked civic ticket was submitted by Urban Pulse AI.",

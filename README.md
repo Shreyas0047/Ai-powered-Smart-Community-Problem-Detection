@@ -312,10 +312,13 @@ Start from [.env.example](.env.example). Keep every credential server-side and u
 | <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code> | SMTP transport settings when <code>EMAIL_PROVIDER=smtp</code> |
 | <code>SMTP_USER</code>, <code>SMTP_PASS</code> | SMTP credentials when <code>EMAIL_PROVIDER=smtp</code> |
 | <code>SMTP_FAMILY=4</code> | Prefer IPv4 where the host cannot reach Gmail IPv6 |
+| <code>AUTHORITY_EMAIL_BCC</code> | Optional hidden copy for authority/report emails, useful for presentation proof and audit testing |
 | <code>RESEND_API_KEY</code>, <code>RESEND_BASE_URL=https://api.resend.com</code> | Resend HTTPS delivery when <code>EMAIL_PROVIDER=resend</code> |
 | <code>ALLOW_ROLE_TOKEN_ISSUE=false</code> | Disable development token issuance in production |
 
 Render Free blocks common SMTP ports, so the recommended free deployment setting is <code>EMAIL_PROVIDER=smtp</code> with a transactional provider such as Brevo on port <code>2525</code>. Resend remains supported through HTTPS, but its no-domain testing sender is limited to the Resend account email.
+
+Authority/report emails are sent by the configured transactional mail provider, so they do not appear in the sender Gmail account's **Sent** folder. For demonstrations, set <code>AUTHORITY_EMAIL_BCC</code> to a controlled inbox; the hidden copy receives the same authority email body and PDF attachment while the authority address remains the primary recipient.
 
 ### Vision Service
 

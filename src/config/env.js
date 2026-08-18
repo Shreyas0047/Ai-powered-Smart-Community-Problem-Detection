@@ -62,6 +62,7 @@ const config = {
   resendApiKey: String(process.env.RESEND_API_KEY || "").trim(),
   resendBaseUrl: String(process.env.RESEND_BASE_URL || "https://api.resend.com").trim(),
   bbmpEmailTo: process.env.BBMP_EMAIL_TO || "comm@bbmp.gov.in",
+  authorityEmailBcc: String(process.env.AUTHORITY_EMAIL_BCC || "").trim(),
   authorityAdapter: String(process.env.AUTHORITY_ADAPTER || "disabled").trim().toLowerCase(),
   authorityWebhookUrl: String(process.env.AUTHORITY_WEBHOOK_URL || "").trim(),
   authorityWebhookToken: String(process.env.AUTHORITY_WEBHOOK_TOKEN || "").trim(),

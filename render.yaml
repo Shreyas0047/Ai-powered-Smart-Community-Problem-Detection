@@ -154,6 +154,8 @@ services:
         sync: false
       - key: BBMP_EMAIL_TO
         value: comm@bbmp.gov.in
+      - key: AUTHORITY_EMAIL_BCC
+        sync: false
       - key: AUTHORITY_ADAPTER
         value: disabled
       - key: AUTHORITY_TICKET_EMAIL
