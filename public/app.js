@@ -1905,8 +1905,9 @@ function useLiveLocation() {
   let bestPosition = null;
   let watchId = null;
   let settled = false;
-  const captureMs = 8500;
-  const goodAccuracyMeters = 45;
+  const captureMs = 15000;
+  const goodAccuracyMeters = 35;
+  const maxAcceptedAccuracyMeters = 120;
 
   function isBetterPosition(next, previous) {
     if (!previous) return true;
@@ -1931,6 +1932,19 @@ function useLiveLocation() {
       useLiveLocationBtn.textContent = originalButtonText;
       return;
     }
+    if (!Number.isFinite(accuracy) || accuracy > maxAcceptedAccuracyMeters) {
+      currentReportMapLocation = null;
+      currentReportLocationAccuracy = null;
+      const accuracyText = formatLiveLocationAccuracy(accuracy) || "unknown GPS accuracy";
+      setDashboardMessage(
+        `Precise live location was not accepted (${accuracyText}). Enable Precise Location, move outdoors, or type the location manually.`,
+        "error"
+      );
+      updateLiveLocationMap(reportLocationInput.value.trim());
+      useLiveLocationBtn.disabled = false;
+      useLiveLocationBtn.textContent = originalButtonText;
+      return;
+    }
 
     let readableLocation = "";
     try {
@@ -1939,7 +1953,7 @@ function useLiveLocation() {
       readableLocation = `Current location near ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
     }
 
-    reportLocationInput.value = readableLocation;
+    reportLocationInput.value = `${readableLocation} (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`;
     currentReportMapLocation = {
       lat: Number(latitude.toFixed(6)),
       lng: Number(longitude.toFixed(6))
@@ -1950,15 +1964,12 @@ function useLiveLocation() {
       imageReady: Boolean(currentImageAnalysisToken),
       message: "Location changed. Check civic context again for this location."
     });
-    updateLiveLocationMap(readableLocation, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+    updateLiveLocationMap(reportLocationInput.value, `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
 
     const accuracyText = formatLiveLocationAccuracy(accuracy);
-    const accuracyWarning = Number.isFinite(accuracy) && accuracy > 150
-      ? " Accuracy is broad; move outdoors or enable precise location if needed."
-      : "";
     setDashboardMessage(
-      `Live location added${accuracyText ? ` (${accuracyText})` : ""}.${reason === "best_available" ? " Best available reading used." : ""}${accuracyWarning}`,
-      Number.isFinite(accuracy) && accuracy > 300 ? "info" : "success"
+      `Precise live location added${accuracyText ? ` (${accuracyText})` : ""}.${reason === "best_available" ? " Best accepted reading used." : ""}`,
+      "success"
     );
     useLiveLocationBtn.disabled = false;
     useLiveLocationBtn.textContent = originalButtonText;
