@@ -33,7 +33,7 @@ Urban Pulse AI turns citizen evidence into a structured civic case. Citizens can
 - [Verification](#verification)
 - [Deployment](#deployment)
 - [API Surface](#api-surface)
-- [Contributing](#contributing)
+
 
 ## What It Does
 
